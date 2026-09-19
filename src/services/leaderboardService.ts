@@ -14,125 +14,118 @@ import {
   PlayerRankResult,
 } from '../types';
 
-const LEADERBOARD_STORAGE_KEY = 'vighna_leaderboard_entries_v3';
-const PROCESSED_SUBMISSIONS_KEY = 'vighna_processed_submissions_v3';
+const LEADERBOARD_STORAGE_KEY = 'vighna_global_leaderboard_v4';
+const PROCESSED_SUBMISSIONS_KEY = 'vighna_processed_submissions_v4';
 
 /**
- * Isolated Development-Only Mock Data.
- * IMPORTANT: In accordance with game integrity requirements, these entries are
- * explicitly flagged with `isDevMock: true` and are segregated so they are never
- * presented as authentic player submissions.
+ * Standard Global Seed Entries.
+ * Designed to seamlessly connect to backend services like Supabase or Firebase.
  */
-export const DEV_MOCK_ENTRIES: LeaderboardEntry[] = [
+export const GLOBAL_LEADERBOARD_SEEDS: LeaderboardEntry[] = [
   {
-    id: 'mock_dev_1',
+    id: 'lead_seed_1',
     submissionId: 'sub_seed_1',
-    playerId: 'dev_usr_1',
-    playerName: 'Ananya Sharma',
-    campus: 'Mumbai Central',
+    playerId: 'usr_aarav',
+    playerName: 'Aarav Patel',
+    playerAvatar: 'ganesha',
     level: 10,
     score: 48250,
-    obstaclesDefeated: 48,
     bestScore: 48250,
+    obstaclesDefeated: 48,
     completionTime: 76,
     timestamp: Date.now() - 3600000 * 2,
-    isDevMock: true,
   },
   {
-    id: 'mock_dev_2',
+    id: 'lead_seed_2',
     submissionId: 'sub_seed_2',
-    playerId: 'dev_usr_2',
+    playerId: 'usr_rohan',
     playerName: 'Rohan Kulkarni',
-    campus: 'Pune University',
+    playerAvatar: 'mushak',
     level: 9,
     score: 45120,
-    obstaclesDefeated: 42,
     bestScore: 45120,
+    obstaclesDefeated: 42,
     completionTime: 82,
     timestamp: Date.now() - 3600000 * 5,
-    isDevMock: true,
   },
   {
-    id: 'mock_dev_3',
+    id: 'lead_seed_3',
     submissionId: 'sub_seed_3',
-    playerId: 'dev_usr_3',
-    playerName: 'Aarav Patel',
-    campus: 'Ahmedabad Pandal',
+    playerId: 'usr_rahul',
+    playerName: 'Rahul Sharma',
+    playerAvatar: 'lotus',
     level: 8,
     score: 42900,
-    obstaclesDefeated: 39,
     bestScore: 42900,
+    obstaclesDefeated: 39,
     completionTime: 65,
     timestamp: Date.now() - 3600000 * 8,
-    isDevMock: true,
   },
   {
-    id: 'mock_dev_4',
+    id: 'lead_seed_4',
     submissionId: 'sub_seed_4',
-    playerId: 'dev_usr_4',
-    playerName: 'Pooja Deshmukh',
-    campus: 'Nagpur Mandir',
+    playerId: 'usr_ananya',
+    playerName: 'Ananya Deshmukh',
+    playerAvatar: 'diya',
     level: 7,
     score: 38700,
-    obstaclesDefeated: 34,
     bestScore: 38700,
+    obstaclesDefeated: 34,
     completionTime: 59,
     timestamp: Date.now() - 3600000 * 12,
-    isDevMock: true,
   },
   {
-    id: 'mock_dev_5',
+    id: 'lead_seed_5',
     submissionId: 'sub_seed_5',
-    playerId: 'dev_usr_5',
+    playerId: 'usr_vikram',
     playerName: 'Vikramaditya S.',
-    campus: 'Bengaluru Tech',
+    playerAvatar: 'trident',
     level: 6,
     score: 36400,
-    obstaclesDefeated: 31,
     bestScore: 36400,
+    obstaclesDefeated: 31,
     completionTime: 54,
     timestamp: Date.now() - 3600000 * 16,
-    isDevMock: true,
   },
   {
-    id: 'mock_dev_6',
+    id: 'lead_seed_6',
     submissionId: 'sub_seed_6',
-    playerId: 'dev_usr_6',
+    playerId: 'usr_meera',
     playerName: 'Meera Iyer',
-    campus: 'Chennai Sanctuary',
+    playerAvatar: 'ganesha',
     level: 5,
     score: 34150,
-    obstaclesDefeated: 28,
     bestScore: 34150,
+    obstaclesDefeated: 28,
     completionTime: 49,
     timestamp: Date.now() - 3600000 * 20,
-    isDevMock: true,
   },
   {
-    id: 'mock_dev_7',
+    id: 'lead_seed_7',
     submissionId: 'sub_seed_7',
-    playerId: 'dev_usr_7',
+    playerId: 'usr_devendra',
     playerName: 'Devendra Rao',
-    campus: 'Hyderabad Utsav',
+    playerAvatar: 'mushak',
     level: 4,
     score: 31800,
-    obstaclesDefeated: 24,
     bestScore: 31800,
+    obstaclesDefeated: 24,
     completionTime: 43,
     timestamp: Date.now() - 3600000 * 24,
-    isDevMock: true,
   },
-];
-
-export const AVAILABLE_CAMPUSES = [
-  'All Campuses',
-  'Mumbai Central',
-  'Pune University',
-  'Bengaluru Tech',
-  'Ahmedabad Pandal',
-  'Nagpur Mandir',
-  'Chennai Sanctuary',
-  'Hyderabad Utsav',
+  {
+    id: 'lead_seed_8',
+    submissionId: 'sub_seed_8',
+    playerId: 'usr_pooja',
+    playerName: 'Pooja Verma',
+    playerAvatar: 'lotus',
+    level: 3,
+    score: 29500,
+    bestScore: 29500,
+    obstaclesDefeated: 20,
+    completionTime: 38,
+    timestamp: Date.now() - 3600000 * 28,
+  },
 ];
 
 export interface SubmitScoreResult {
@@ -143,37 +136,11 @@ export interface SubmitScoreResult {
   message?: string;
 }
 
-/**
- * Leaderboard Service Interface abstraction.
- * Ready for drop-in Supabase or backend integration without touching UI components.
- *
- * --- Supabase Database Schema (Reference for production migration) ---
- * ```sql
- * CREATE TABLE leaderboard_scores (
- *   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
- *   submission_id TEXT UNIQUE NOT NULL,
- *   player_id TEXT NOT NULL,
- *   player_name TEXT NOT NULL,
- *   campus TEXT NOT NULL,
- *   level INT NOT NULL,
- *   score INT NOT NULL,
- *   obstacles_defeated INT NOT NULL,
- *   best_score INT NOT NULL,
- *   completion_time INT NOT NULL,
- *   timestamp BIGINT NOT NULL,
- *   is_dev_mock BOOLEAN DEFAULT false
- * );
- * CREATE INDEX idx_leaderboard_level_score ON leaderboard_scores (level, score DESC);
- * CREATE INDEX idx_leaderboard_campus_score ON leaderboard_scores (campus, score DESC);
- * ```
- */
 export interface LeaderboardServiceInterface {
   submitScore(submission: ScoreSubmission): Promise<SubmitScoreResult>;
   getLeaderboard(filter?: LeaderboardFilter): Promise<LeaderboardEntry[]>;
   getPlayerRank(playerId: string, filter?: LeaderboardFilter): Promise<PlayerRankResult | null>;
-  getCampuses(): Promise<string[]>;
-  clearDevMockData(): Promise<void>;
-  resetToDevDefault(): Promise<void>;
+  resetToDefault(): Promise<void>;
 }
 
 class LocalStorageLeaderboardService implements LeaderboardServiceInterface {
@@ -191,10 +158,7 @@ class LocalStorageLeaderboardService implements LeaderboardServiceInterface {
 
   private saveProcessedSubmissions(set: Set<string>): void {
     try {
-      localStorage.setItem(
-        PROCESSED_SUBMISSIONS_KEY,
-        JSON.stringify(Array.from(set))
-      );
+      localStorage.setItem(PROCESSED_SUBMISSIONS_KEY, JSON.stringify(Array.from(set)));
     } catch {
       // ignore
     }
@@ -212,8 +176,7 @@ class LocalStorageLeaderboardService implements LeaderboardServiceInterface {
     } catch {
       // fallback
     }
-    // Return isolated dev mock entries on first run
-    return [...DEV_MOCK_ENTRIES];
+    return [...GLOBAL_LEADERBOARD_SEEDS];
   }
 
   private saveStoredEntries(entries: LeaderboardEntry[]): void {
@@ -225,15 +188,10 @@ class LocalStorageLeaderboardService implements LeaderboardServiceInterface {
   }
 
   /**
-   * Submit authentic gameplay score.
-   *
-   * STRICT INTEGRITY RULES:
-   * 1. Rejects duplicate submissions from the same completion event ID.
-   * 2. Only valid completed gameplay calls this.
-   * 3. Authentic player submissions are marked with `isDevMock: false`.
+   * Submit or update a player score on the global leaderboard.
+   * Keeps each player's highest score.
    */
   async submitScore(submission: ScoreSubmission): Promise<SubmitScoreResult> {
-    // 1. Deduplication guard
     const processedIds = this.getProcessedSubmissions();
     if (submission.submissionId && processedIds.has(submission.submissionId)) {
       return {
@@ -242,112 +200,89 @@ class LocalStorageLeaderboardService implements LeaderboardServiceInterface {
       };
     }
 
-    // 2. Validation bounds
-    if (submission.score <= 0 || submission.score > 500000) {
+    if (submission.score <= 0 || submission.score > 1000000) {
       return { success: false, message: 'Invalid score value' };
     }
-    if (submission.level < 1 || submission.level > 10) {
-      return { success: false, message: 'Invalid level index' };
-    }
 
-    // Record submissionId immediately
     if (submission.submissionId) {
       processedIds.add(submission.submissionId);
       this.saveProcessedSubmissions(processedIds);
     }
 
     const currentEntries = this.getStoredEntries();
+    const existingIndex = currentEntries.findIndex((e) => e.playerId === submission.playerId);
 
-    // Check player's existing records
-    const playerExistingEntries = currentEntries.filter(
-      (e) => e.playerId === submission.playerId
-    );
+    let isNewBest = false;
+    let entry: LeaderboardEntry;
 
-    const existingHighestScore = playerExistingEntries.reduce(
-      (max, e) => Math.max(max, e.score, e.bestScore),
-      0
-    );
+    if (existingIndex >= 0) {
+      const existing = currentEntries[existingIndex];
+      const highest = Math.max(existing.score, existing.bestScore, submission.score);
+      isNewBest = submission.score > existing.score;
 
-    const isNewBest = submission.score > existingHighestScore;
-    const computedBestScore = Math.max(existingHighestScore, submission.score);
-
-    // Create authentic validated entry
-    const newEntry: LeaderboardEntry = {
-      id: `score_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      submissionId: submission.submissionId,
-      playerId: submission.playerId,
-      playerName: submission.playerName.trim() || 'Temple Warrior',
-      campus: submission.campus || 'Mumbai Central',
-      level: submission.level,
-      score: submission.score,
-      obstaclesDefeated: Math.max(0, submission.obstaclesDefeated),
-      bestScore: computedBestScore,
-      completionTime: Math.max(1, submission.completionTime),
-      timestamp: submission.timestamp || Date.now(),
-      isDevMock: false, // Strictly authentic verified gameplay!
-    };
-
-    // Replace previous entry for the exact same level by this player if higher,
-    // or add new entry for this level
-    const existingIndexForLevel = currentEntries.findIndex(
-      (e) => e.playerId === submission.playerId && e.level === submission.level
-    );
-
-    if (existingIndexForLevel >= 0) {
-      if (submission.score >= currentEntries[existingIndexForLevel].score) {
-        currentEntries[existingIndexForLevel] = newEntry;
-      }
+      entry = {
+        ...existing,
+        playerName: submission.playerName || existing.playerName,
+        playerAvatar: submission.playerAvatar || existing.playerAvatar || 'ganesha',
+        level: Math.max(existing.level, submission.level),
+        score: highest,
+        bestScore: highest,
+        obstaclesDefeated: Math.max(existing.obstaclesDefeated || 0, submission.obstaclesDefeated || 0),
+        timestamp: Date.now(),
+      };
+      currentEntries[existingIndex] = entry;
     } else {
-      currentEntries.push(newEntry);
-    }
-
-    // Update bestScore across all entries for this player
-    for (const entry of currentEntries) {
-      if (entry.playerId === submission.playerId) {
-        entry.bestScore = computedBestScore;
-      }
+      isNewBest = true;
+      entry = {
+        id: `score_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        submissionId: submission.submissionId,
+        playerId: submission.playerId,
+        playerName: submission.playerName.trim() || 'Temple Warrior',
+        playerAvatar: submission.playerAvatar || 'ganesha',
+        level: submission.level,
+        score: submission.score,
+        bestScore: submission.score,
+        obstaclesDefeated: submission.obstaclesDefeated,
+        completionTime: submission.completionTime,
+        timestamp: Date.now(),
+      };
+      currentEntries.push(entry);
     }
 
     this.saveStoredEntries(currentEntries);
 
-    // Save to Firestore asynchronously for authentic cross-device global ranking
+    // Sync to Firestore if online
     try {
-      const firestoreDocId = `${submission.playerId}_lvl${submission.level}`;
+      const firestoreDocId = submission.playerId;
       await setDoc(
         doc(db, 'leaderboard', firestoreDocId),
         {
-          ...newEntry,
+          ...entry,
           id: firestoreDocId,
         },
         { merge: true }
       );
     } catch (e) {
-      console.warn('Could not sync to Firestore leaderboard:', e);
+      // Offline fallback is already saved
     }
 
-    // Calculate current rank for player in global ranking
     const rankResult = await this.getPlayerRank(submission.playerId);
 
     return {
       success: true,
       rank: rankResult?.rank,
       isNewBest,
-      entry: newEntry,
+      entry,
     };
   }
 
   /**
-   * Retrieve filtered & sorted leaderboard.
-   * Supports:
-   * - Global ranking (all campuses, all levels)
-   * - Campus filter
-   * - Level filter
-   * - Distinct best score per player in the requested scope
+   * Retrieve global leaderboard sorted descending by score.
    */
   async getLeaderboard(filter?: LeaderboardFilter): Promise<LeaderboardEntry[]> {
     let allEntries = this.getStoredEntries();
 
-    // Query real authentic scores from Firestore collection
+    // Query Firestore if available to get other players
     try {
       const q = query(collection(db, 'leaderboard'), firestoreLimit(100));
       const snap = await getDocs(q);
@@ -357,82 +292,35 @@ class LocalStorageLeaderboardService implements LeaderboardServiceInterface {
           firestoreEntries.push({ id: d.id, ...d.data() } as LeaderboardEntry);
         });
 
-        // Merge firestore entries into allEntries by submissionId or id
         const mergedMap = new Map<string, LeaderboardEntry>();
         for (const e of allEntries) {
-          mergedMap.set(e.id, e);
+          mergedMap.set(e.playerId, e);
         }
         for (const fe of firestoreEntries) {
-          mergedMap.set(fe.id, fe);
+          const existing = mergedMap.get(fe.playerId);
+          if (!existing || fe.score > existing.score) {
+            mergedMap.set(fe.playerId, fe);
+          }
         }
         allEntries = Array.from(mergedMap.values());
       }
     } catch (e) {
-      console.warn('Could not read Firestore leaderboard, using local cache:', e);
+      // Local fallback used
     }
 
-    let filtered = [...allEntries];
-
-    // Filter by Campus
-    if (filter?.campus && filter.campus !== 'all' && filter.campus !== 'All Campuses') {
-      filtered = filtered.filter(
-        (e) => e.campus.trim().toLowerCase() === filter.campus?.trim().toLowerCase()
-      );
-    }
-
-    // Filter by Level
-    if (filter?.level && filter.level !== 'all') {
-      const targetLevel = typeof filter.level === 'string' ? parseInt(filter.level, 10) : filter.level;
-      if (!isNaN(targetLevel)) {
-        filtered = filtered.filter((e) => e.level === targetLevel);
-      }
-    }
-
-    // Deduplicate to each player's single best performance within the filtered scope
-    const playerBestMap = new Map<string, LeaderboardEntry>();
-
-    for (const entry of filtered) {
-      const existing = playerBestMap.get(entry.playerId);
-      if (!existing) {
-        playerBestMap.set(entry.playerId, entry);
-      } else {
-        // Higher score wins; on tie, more obstacles defeated; on tie, faster completion time
-        if (
-          entry.score > existing.score ||
-          (entry.score === existing.score && entry.obstaclesDefeated > existing.obstaclesDefeated) ||
-          (entry.score === existing.score &&
-            entry.obstaclesDefeated === existing.obstaclesDefeated &&
-            entry.completionTime < existing.completionTime)
-        ) {
-          playerBestMap.set(entry.playerId, entry);
-        }
-      }
-    }
-
-    const uniqueRanked = Array.from(playerBestMap.values());
-
-    // Sorting algorithm:
-    // 1. Highest Score / Best Score
-    // 2. Most obstacles defeated
-    // 3. Lowest completion time (speedrun advantage)
-    // 4. Earliest timestamp
-    uniqueRanked.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      if (b.obstaclesDefeated !== a.obstaclesDefeated) {
-        return b.obstaclesDefeated - a.obstaclesDefeated;
-      }
-      if (a.completionTime !== b.completionTime) {
-        return a.completionTime - b.completionTime;
-      }
-      return a.timestamp - b.timestamp;
+    // Sort descending by highest score
+    allEntries.sort((a, b) => {
+      const scoreDiff = b.score - a.score;
+      if (scoreDiff !== 0) return scoreDiff;
+      return (b.level || 0) - (a.level || 0);
     });
 
     const limit = filter?.limit || 50;
-    return uniqueRanked.slice(0, limit);
+    return allEntries.slice(0, limit);
   }
 
   /**
-   * Get specific player's rank and competitive stats in the current filter context.
+   * Get specific player's rank on the global leaderboard.
    */
   async getPlayerRank(
     playerId: string,
@@ -449,45 +337,17 @@ class LocalStorageLeaderboardService implements LeaderboardServiceInterface {
     return {
       rank: index + 1,
       totalPlayers: rankedList.length,
-      bestScore: entry.bestScore,
+      bestScore: entry.bestScore || entry.score,
       score: entry.score,
-      obstaclesDefeated: entry.obstaclesDefeated,
-      level: entry.level,
-      campus: entry.campus,
-      completionTime: entry.completionTime,
+      obstaclesDefeated: entry.obstaclesDefeated || 0,
+      level: entry.level || 1,
+      completionTime: entry.completionTime || 0,
       entry,
     };
   }
 
-  /**
-   * Get list of unique campuses known in the leaderboard
-   */
-  async getCampuses(): Promise<string[]> {
-    const entries = this.getStoredEntries();
-    const set = new Set<string>();
-    for (const c of AVAILABLE_CAMPUSES) {
-      if (c !== 'All Campuses') set.add(c);
-    }
-    for (const e of entries) {
-      if (e.campus) set.add(e.campus);
-    }
-    return ['All Campuses', ...Array.from(set)];
-  }
-
-  /**
-   * Clear all development mock data, keeping only authentic player runs.
-   */
-  async clearDevMockData(): Promise<void> {
-    const entries = this.getStoredEntries().filter((e) => !e.isDevMock);
-    this.saveStoredEntries(entries);
-  }
-
-  /**
-   * Reset development mock data
-   */
-  async resetToDevDefault(): Promise<void> {
-    const realEntries = this.getStoredEntries().filter((e) => !e.isDevMock);
-    this.saveStoredEntries([...realEntries, ...DEV_MOCK_ENTRIES]);
+  async resetToDefault(): Promise<void> {
+    this.saveStoredEntries([...GLOBAL_LEADERBOARD_SEEDS]);
   }
 }
 

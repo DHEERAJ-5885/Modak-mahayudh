@@ -87,7 +87,6 @@ export interface PlayerProfile {
   displayName?: string;
   email?: string;
   avatar?: string;
-  campus?: string;
   lives: number;
   maxLives: number;
   coins: number;
@@ -132,6 +131,8 @@ export interface FriendRecord {
   friendAvatar?: string;
   friendLevel?: number;
   friendStars?: number;
+  highScore?: number;
+  isOnline?: boolean;
   createdAt: string;
 }
 
@@ -148,21 +149,43 @@ export interface FriendRequest {
 
 export interface LifeRequest {
   id: string;
-  senderId: string;
+  fromPlayerId: string;
+  toPlayerId: string;
+  senderId?: string; // backwards compatibility
   senderName: string;
-  receiverId: string;
+  receiverId?: string; // backwards compatibility
   receiverName: string;
-  status: 'pending' | 'sent' | 'claimed';
+  type?: 'life';
+  status: 'pending' | 'sent' | 'claimed' | 'ignored';
+  createdAt: string;
+}
+
+export interface FriendInvite {
+  id: string;
+  fromPlayerId: string;
+  toPlayerId: string;
+  toPlayerName: string;
+  toPlayerAvatar?: string;
+  status: 'invited' | 'accepted';
   createdAt: string;
 }
 
 export interface GameNotification {
   id: string;
   recipientId: string;
-  type: 'friend_request' | 'friend_accepted' | 'life_request' | 'life_sent' | 'high_score' | 'power_unlocked';
+  type:
+    | 'friend_request'
+    | 'friend_accepted'
+    | 'life_request'
+    | 'life_sent'
+    | 'friend_invite'
+    | 'achievement'
+    | 'high_score'
+    | 'power_unlocked';
   message: string;
   read: boolean;
   relatedPlayerId?: string;
+  relatedPlayerName?: string;
   relatedGameData?: any;
   createdAt: string;
 }
@@ -172,18 +195,17 @@ export interface LeaderboardEntry {
   submissionId?: string;
   playerId: string;
   playerName: string;
-  campus: string;
+  playerAvatar?: string;
   level: number;
   score: number;
-  obstaclesDefeated: number;
   bestScore: number;
-  completionTime: number; // in seconds
-  timestamp: number;
+  obstaclesDefeated?: number;
+  completionTime?: number; // in seconds
+  timestamp?: number;
   isDevMock?: boolean;
 }
 
 export interface LeaderboardFilter {
-  campus?: string; // 'all' or specific campus name
   level?: number | 'all'; // 'all' or 1..10
   limit?: number;
 }
@@ -192,7 +214,7 @@ export interface ScoreSubmission {
   submissionId: string;
   playerId: string;
   playerName: string;
-  campus: string;
+  playerAvatar?: string;
   level: number;
   score: number;
   obstaclesDefeated: number;
@@ -208,7 +230,6 @@ export interface PlayerRankResult {
   score: number;
   obstaclesDefeated: number;
   level: number;
-  campus: string;
   completionTime: number;
   entry?: LeaderboardEntry;
 }

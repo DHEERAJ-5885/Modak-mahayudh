@@ -13,6 +13,7 @@ interface HeaderProps {
   onOpenProfile: () => void;
   onOpenSocial: () => void;
   onOpenNotifications: () => void;
+  onOpenLives?: () => void;
   unreadCount?: number;
   isOnline?: boolean;
   title?: string;
@@ -28,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfile,
   onOpenSocial,
   onOpenNotifications,
+  onOpenLives,
   unreadCount = 0,
   isOnline = true,
   title,

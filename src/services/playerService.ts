@@ -15,7 +15,6 @@ import { INITIAL_LEVELS } from '../data/gameData';
 
 export const DEFAULT_PLAYER_STATS: Omit<PlayerProfile, 'id' | 'name' | 'displayName' | 'email'> = {
   avatar: 'ganesha',
-  campus: 'Mumbai Central',
   lives: 5,
   maxLives: 5,
   coins: 1000,
@@ -88,7 +87,6 @@ export const playerService = {
       displayName,
       email,
       avatar: migratedData?.avatar || 'ganesha',
-      campus: migratedData?.campus || 'Mumbai Central',
       lives: migratedData?.lives !== undefined ? migratedData.lives : 5,
       maxLives: 5,
       coins: migratedData?.coins !== undefined ? migratedData.coins : 1000,

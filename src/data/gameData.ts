@@ -284,7 +284,6 @@ export const INITIAL_PLAYER: import('../types').PlayerProfile = {
   name: 'Bhakta Aryan',
   displayName: 'Bhakta Aryan',
   avatar: 'ganesha',
-  campus: 'Mumbai Central',
   lives: 5,
   maxLives: 5,
   coins: 2450,

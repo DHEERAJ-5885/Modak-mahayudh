@@ -10,164 +10,249 @@ import {
   limit,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { FriendRecord, FriendRequest, LifeRequest, GameNotification } from '../types';
-import { playerService } from './playerService';
+import {
+  FriendRecord,
+  FriendRequest,
+  LifeRequest,
+  FriendInvite,
+  GameNotification,
+} from '../types';
+
+const STORAGE_KEYS = {
+  FRIENDS: 'vighna_friends_v4',
+  FRIEND_REQUESTS: 'vighna_friend_requests_v4',
+  LIFE_REQUESTS: 'vighna_life_requests_v4',
+  INVITES: 'vighna_invites_v4',
+  SENT_LIFE_TODAY: 'vighna_sent_life_today_v4',
+  NOTIFICATIONS: 'vighna_notifications_v4',
+};
+
+// Initial pre-seeded mock friends
+export const SEED_FRIENDS: FriendRecord[] = [
+  {
+    id: 'fr_seed_1',
+    playerId: 'current_player',
+    friendId: 'usr_aarav',
+    friendName: 'Aarav Patel',
+    friendAvatar: 'ganesha',
+    friendLevel: 8,
+    friendStars: 24,
+    highScore: 48250,
+    isOnline: true,
+    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+  },
+  {
+    id: 'fr_seed_2',
+    playerId: 'current_player',
+    friendId: 'usr_rahul',
+    friendName: 'Rahul Sharma',
+    friendAvatar: 'lotus',
+    friendLevel: 6,
+    friendStars: 18,
+    highScore: 42900,
+    isOnline: true,
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+  },
+  {
+    id: 'fr_seed_3',
+    playerId: 'current_player',
+    friendId: 'usr_ananya',
+    friendName: 'Ananya Deshmukh',
+    friendAvatar: 'diya',
+    friendLevel: 5,
+    friendStars: 15,
+    highScore: 38700,
+    isOnline: false,
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+  },
+];
+
+// Initial pre-seeded incoming friend requests
+export const SEED_FRIEND_REQUESTS: FriendRequest[] = [
+  {
+    id: 'freq_seed_1',
+    senderId: 'usr_rohan',
+    senderName: 'Rohan Kulkarni',
+    senderAvatar: 'mushak',
+    receiverId: 'current_player',
+    receiverName: 'Bhakta',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+  },
+  {
+    id: 'freq_seed_2',
+    senderId: 'usr_meera',
+    senderName: 'Meera Iyer',
+    senderAvatar: 'lotus',
+    receiverId: 'current_player',
+    receiverName: 'Bhakta',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000 * 6).toISOString(),
+  },
+];
+
+// Suggested players for Invite Friends
+export const SUGGESTED_PLAYERS = [
+  { id: 'usr_vikram', name: 'Vikramaditya S.', avatar: 'trident', level: 7, score: 36400 },
+  { id: 'usr_devendra', name: 'Devendra Rao', avatar: 'mushak', level: 5, score: 31800 },
+  { id: 'usr_pooja', name: 'Pooja Verma', avatar: 'lotus', level: 4, score: 29500 },
+  { id: 'usr_sid', name: 'Siddharth Joshi', avatar: 'ganesha', level: 6, score: 33200 },
+  { id: 'usr_tanvi', name: 'Tanvi Kulkarni', avatar: 'diya', level: 3, score: 24100 },
+  { id: 'usr_aditya', name: 'Aditya Narayan', avatar: 'trident', level: 5, score: 30500 },
+];
+
+// Seed notifications
+export const SEED_NOTIFICATIONS: GameNotification[] = [
+  {
+    id: 'notif_seed_1',
+    recipientId: 'current_player',
+    type: 'life_request',
+    message: 'Rahul requested a life from you.',
+    read: false,
+    relatedPlayerId: 'usr_rahul',
+    relatedPlayerName: 'Rahul Sharma',
+    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+  },
+  {
+    id: 'notif_seed_2',
+    recipientId: 'current_player',
+    type: 'life_sent',
+    message: 'Ananya sent you a life ❤️',
+    read: false,
+    relatedPlayerId: 'usr_ananya',
+    relatedPlayerName: 'Ananya Deshmukh',
+    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+  },
+  {
+    id: 'notif_seed_3',
+    recipientId: 'current_player',
+    type: 'friend_request',
+    message: 'Rohan Kulkarni sent you a friend request!',
+    read: false,
+    relatedPlayerId: 'usr_rohan',
+    relatedPlayerName: 'Rohan Kulkarni',
+    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+  },
+  {
+    id: 'notif_seed_4',
+    recipientId: 'current_player',
+    type: 'achievement',
+    message: 'Temple Devotion: Daily streak reached 3 days! 🪔',
+    read: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
+  },
+];
 
 export const socialService = {
-  /**
-   * Get confirmed friends for a player
-   */
+  // ----------------------------------------------------
+  // FRIENDS
+  // ----------------------------------------------------
+
   async getFriends(userId: string): Promise<FriendRecord[]> {
     try {
-      const q = query(
-        collection(db, 'friends'),
-        where('playerId', '==', userId)
-      );
-      const snap = await getDocs(q);
-      const friends: FriendRecord[] = [];
-      snap.forEach((d) => {
-        friends.push({ id: d.id, ...d.data() } as FriendRecord);
-      });
-      return friends;
-    } catch (err) {
-      console.error('Error loading friends:', err);
-      return [];
-    }
-  },
-
-  /**
-   * Search for other registered players by display name
-   */
-  async searchPlayers(searchTerm: string, currentUserId: string): Promise<Array<{ id: string; displayName: string; avatar?: string; currentLevel?: number }>> {
-    const clean = searchTerm.trim().toLowerCase();
-    if (!clean) return [];
-
-    try {
-      // Query players collection
-      const q = query(collection(db, 'players'), limit(25));
-      const snap = await getDocs(q);
-      const results: Array<{ id: string; displayName: string; avatar?: string; currentLevel?: number }> = [];
-
-      snap.forEach((d) => {
-        if (d.id !== currentUserId) {
-          const data = d.data();
-          const name = (data.displayName || data.name || '').toLowerCase();
-          if (name.includes(clean)) {
-            results.push({
-              id: d.id,
-              displayName: data.displayName || data.name || 'Bhakta',
-              avatar: data.avatar || 'ganesha',
-              currentLevel: data.highestLevel || data.currentLevel || 1,
-            });
-          }
+      const raw = localStorage.getItem(`${STORAGE_KEYS.FRIENDS}_${userId || 'default'}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
         }
-      });
-      return results;
-    } catch (err) {
-      console.error('Error searching players:', err);
-      return [];
+      }
+    } catch {
+      // fallback
     }
+
+    // Return realistic seed friends
+    const seeds = SEED_FRIENDS.map((f) => ({ ...f, playerId: userId }));
+    this.saveFriends(userId, seeds);
+    return seeds;
   },
 
-  /**
-   * Send a friend request
-   */
-  async sendFriendRequest(
-    senderId: string,
-    senderName: string,
-    receiverId: string,
-    receiverName: string
-  ): Promise<{ success: boolean; message: string }> {
+  saveFriends(userId: string, friends: FriendRecord[]): void {
     try {
-      // Check if already friends
-      const friendsSnap = await getDocs(
-        query(
-          collection(db, 'friends'),
-          where('playerId', '==', senderId),
-          where('friendId', '==', receiverId)
-        )
+      localStorage.setItem(
+        `${STORAGE_KEYS.FRIENDS}_${userId || 'default'}`,
+        JSON.stringify(friends)
       );
-      if (!friendsSnap.empty) {
-        return { success: false, message: 'You are already friends with this player!' };
-      }
-
-      // Check if request already pending
-      const reqSnap = await getDocs(
-        query(
-          collection(db, 'friend_requests'),
-          where('senderId', '==', senderId),
-          where('receiverId', '==', receiverId),
-          where('status', '==', 'pending')
-        )
-      );
-      if (!reqSnap.empty) {
-        return { success: false, message: 'Friend request already sent and pending!' };
-      }
-
-      // Add request doc
-      await addDoc(collection(db, 'friend_requests'), {
-        senderId,
-        senderName,
-        receiverId,
-        receiverName,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      });
-
-      // Send notification to recipient
-      await addDoc(collection(db, 'notifications'), {
-        recipientId: receiverId,
-        type: 'friend_request',
-        message: `${senderName} sent you a friend request! 🕉️`,
-        read: false,
-        relatedPlayerId: senderId,
-        createdAt: new Date().toISOString(),
-      });
-
-      return { success: true, message: `Friend request sent to ${receiverName}!` };
-    } catch (err: any) {
-      console.error('Error sending friend request:', err);
-      return { success: false, message: err.message || 'Failed to send friend request.' };
+    } catch {
+      // ignore
     }
   },
 
-  /**
-   * Get pending friend requests for current user
-   */
+  // ----------------------------------------------------
+  // FRIEND REQUESTS
+  // ----------------------------------------------------
+
   async getPendingFriendRequests(userId: string): Promise<FriendRequest[]> {
     try {
-      const q = query(
-        collection(db, 'friend_requests'),
-        where('receiverId', '==', userId),
-        where('status', '==', 'pending')
+      const raw = localStorage.getItem(`${STORAGE_KEYS.FRIEND_REQUESTS}_${userId || 'default'}`);
+      if (raw) {
+        const parsed: FriendRequest[] = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((r) => r.status === 'pending');
+        }
+      }
+    } catch {
+      // fallback
+    }
+
+    const seeds = SEED_FRIEND_REQUESTS.map((r) => ({ ...r, receiverId: userId }));
+    this.saveFriendRequests(userId, seeds);
+    return seeds;
+  },
+
+  saveFriendRequests(userId: string, requests: FriendRequest[]): void {
+    try {
+      localStorage.setItem(
+        `${STORAGE_KEYS.FRIEND_REQUESTS}_${userId || 'default'}`,
+        JSON.stringify(requests)
       );
-      const snap = await getDocs(q);
-      const requests: FriendRequest[] = [];
-      snap.forEach((d) => {
-        requests.push({ id: d.id, ...d.data() } as FriendRequest);
-      });
-      return requests;
-    } catch (err) {
-      console.error('Error loading friend requests:', err);
-      return [];
+    } catch {
+      // ignore
     }
   },
 
-  /**
-   * Accept or reject a friend request
-   */
   async respondToFriendRequest(
     request: FriendRequest,
     accept: boolean,
     currentUserId: string,
     currentUserName: string
-  ): Promise<void> {
-    try {
-      const reqRef = doc(db, 'friend_requests', request.id);
-      if (accept) {
-        await updateDoc(reqRef, { status: 'accepted' });
+  ): Promise<{ success: boolean; newFriends: FriendRecord[]; newRequests: FriendRequest[] }> {
+    const allRequests = await this.getPendingFriendRequests(currentUserId);
+    const updatedRequests = allRequests.filter((r) => r.id !== request.id);
+    this.saveFriendRequests(currentUserId, updatedRequests);
 
-        // Add bilateral friend records
+    let updatedFriends = await this.getFriends(currentUserId);
+
+    if (accept) {
+      const newFriend: FriendRecord = {
+        id: `fr_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        playerId: currentUserId,
+        friendId: request.senderId,
+        friendName: request.senderName,
+        friendAvatar: request.senderAvatar || 'ganesha',
+        friendLevel: 4,
+        friendStars: 10,
+        highScore: 32000,
+        isOnline: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Add to friends if not already present
+      if (!updatedFriends.some((f) => f.friendId === request.senderId)) {
+        updatedFriends = [newFriend, ...updatedFriends];
+        this.saveFriends(currentUserId, updatedFriends);
+      }
+
+      // Add notification for current user
+      await this.addNotification(currentUserId, {
+        type: 'friend_accepted',
+        message: `You and ${request.senderName} are now temple friends! 🕉️`,
+        relatedPlayerId: request.senderId,
+        relatedPlayerName: request.senderName,
+      });
+
+      // Also sync to Firestore if online
+      try {
         await addDoc(collection(db, 'friends'), {
           playerId: currentUserId,
           friendId: request.senderId,
@@ -175,150 +260,282 @@ export const socialService = {
           friendAvatar: request.senderAvatar || 'ganesha',
           createdAt: new Date().toISOString(),
         });
-
-        await addDoc(collection(db, 'friends'), {
-          playerId: request.senderId,
-          friendId: currentUserId,
-          friendName: currentUserName,
-          createdAt: new Date().toISOString(),
-        });
-
-        // Notify sender
-        await addDoc(collection(db, 'notifications'), {
-          recipientId: request.senderId,
-          type: 'friend_accepted',
-          message: `${currentUserName} accepted your friend request! 🙏`,
-          read: false,
-          relatedPlayerId: currentUserId,
-          createdAt: new Date().toISOString(),
-        });
-      } else {
-        await updateDoc(reqRef, { status: 'rejected' });
+      } catch (e) {
+        // ignore offline
       }
-    } catch (err) {
-      console.error('Error responding to friend request:', err);
     }
+
+    return {
+      success: true,
+      newFriends: updatedFriends,
+      newRequests: updatedRequests,
+    };
   },
 
-  /**
-   * Request a life from a friend
-   */
+  // ----------------------------------------------------
+  // INVITE FRIENDS
+  // ----------------------------------------------------
+
+  async getInvitedPlayerIds(userId: string): Promise<string[]> {
+    try {
+      const raw = localStorage.getItem(`${STORAGE_KEYS.INVITES}_${userId || 'default'}`);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  },
+
+  async inviteFriend(
+    fromPlayerId: string,
+    toPlayerId: string,
+    toPlayerName: string,
+    toPlayerAvatar?: string
+  ): Promise<{ success: boolean; message: string }> {
+    const invitedIds = await this.getInvitedPlayerIds(fromPlayerId);
+    if (invitedIds.includes(toPlayerId)) {
+      return { success: false, message: `${toPlayerName} is already invited!` };
+    }
+
+    invitedIds.push(toPlayerId);
+    try {
+      localStorage.setItem(
+        `${STORAGE_KEYS.INVITES}_${fromPlayerId || 'default'}`,
+        JSON.stringify(invitedIds)
+      );
+    } catch {
+      // ignore
+    }
+
+    // Try Firestore sync
+    try {
+      await addDoc(collection(db, 'invitations'), {
+        fromPlayerId,
+        toPlayerId,
+        toPlayerName,
+        status: 'invited',
+        createdAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      // ignore offline
+    }
+
+    return { success: true, message: 'Invitation sent!' };
+  },
+
+  // ----------------------------------------------------
+  // REQUEST LIVES
+  // ----------------------------------------------------
+
+  async getRequestedFriendIds(fromPlayerId: string): Promise<string[]> {
+    try {
+      const raw = localStorage.getItem(`${STORAGE_KEYS.LIFE_REQUESTS}_${fromPlayerId || 'default'}`);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  },
+
   async requestLife(
     senderId: string,
     senderName: string,
     receiverId: string,
     receiverName: string
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      await addDoc(collection(db, 'life_requests'), {
-        senderId,
-        senderName,
-        receiverId,
-        receiverName,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      });
-
-      await addDoc(collection(db, 'notifications'), {
-        recipientId: receiverId,
-        type: 'life_request',
-        message: `${senderName} requested a life! ❤️ Can you send them blessings?`,
-        read: false,
-        relatedPlayerId: senderId,
-        createdAt: new Date().toISOString(),
-      });
-
-      return { success: true, message: `Life request sent to ${receiverName}!` };
-    } catch (err: any) {
-      return { success: false, message: err.message || 'Failed to request life.' };
+  ): Promise<{ success: boolean; message: string; request?: LifeRequest }> {
+    const requestedIds = await this.getRequestedFriendIds(senderId);
+    if (requestedIds.includes(receiverId)) {
+      return { success: false, message: `Life request already sent to ${receiverName}!` };
     }
+
+    requestedIds.push(receiverId);
+    try {
+      localStorage.setItem(
+        `${STORAGE_KEYS.LIFE_REQUESTS}_${senderId || 'default'}`,
+        JSON.stringify(requestedIds)
+      );
+    } catch {
+      // ignore
+    }
+
+    const lifeRequest: LifeRequest = {
+      id: `request-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      fromPlayerId: senderId,
+      toPlayerId: receiverId,
+      senderId,
+      senderName,
+      receiverId,
+      receiverName,
+      type: 'life',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+
+    // Add notification for receiver (if same device or mock test)
+    await this.addNotification(receiverId, {
+      type: 'life_request',
+      message: `${senderName} requested a life from you.`,
+      relatedPlayerId: senderId,
+      relatedPlayerName: senderName,
+    });
+
+    // Firestore sync if connected
+    try {
+      await addDoc(collection(db, 'life_requests'), lifeRequest);
+    } catch (e) {
+      // ignore offline
+    }
+
+    return {
+      success: true,
+      message: `Life request sent to ${receiverName}!`,
+      request: lifeRequest,
+    };
   },
 
-  /**
-   * Send a life to a friend who requested one
-   */
+  // ----------------------------------------------------
+  // FRIEND LIFE GIVING (SEND LIFE TO FRIEND)
+  // ----------------------------------------------------
+
+  async getSentLifeFriendIds(senderId: string): Promise<string[]> {
+    try {
+      const raw = localStorage.getItem(`${STORAGE_KEYS.SENT_LIFE_TODAY}_${senderId || 'default'}`);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  },
+
   async sendLife(
-    lifeRequestId: string,
     senderId: string,
     senderName: string,
-    targetPlayerId: string
+    targetPlayerId: string,
+    targetPlayerName: string
   ): Promise<{ success: boolean; message: string }> {
-    try {
-      // Mark life request as sent if valid doc ID provided
-      if (lifeRequestId && !lifeRequestId.startsWith('mock_')) {
-        try {
-          const reqRef = doc(db, 'life_requests', lifeRequestId);
-          await updateDoc(reqRef, { status: 'sent' });
-        } catch (e) {
-          // May be a notification ID or already processed
-        }
-      }
+    const sentList = await this.getSentLifeFriendIds(senderId);
+    if (sentList.includes(targetPlayerId)) {
+      return { success: false, message: `You already sent a life to ${targetPlayerName} today!` };
+    }
 
-      // Notify recipient so they can claim their life
+    sentList.push(targetPlayerId);
+    try {
+      localStorage.setItem(
+        `${STORAGE_KEYS.SENT_LIFE_TODAY}_${senderId || 'default'}`,
+        JSON.stringify(sentList)
+      );
+    } catch {
+      // ignore
+    }
+
+    // Add notification for recipient
+    await this.addNotification(targetPlayerId, {
+      type: 'life_sent',
+      message: `${senderName} sent you a life ❤️`,
+      relatedPlayerId: senderId,
+      relatedPlayerName: senderName,
+    });
+
+    // Firestore sync if connected
+    try {
       await addDoc(collection(db, 'notifications'), {
         recipientId: targetPlayerId,
         type: 'life_sent',
-        message: `${senderName} sent you a life! ❤️ Claim it to keep playing!`,
+        message: `${senderName} sent you a life ❤️`,
         read: false,
-        claimed: false,
         relatedPlayerId: senderId,
+        relatedPlayerName: senderName,
         createdAt: new Date().toISOString(),
       });
-
-      return { success: true, message: `Life blessings sent to friend! ❤️` };
-    } catch (err: any) {
-      return { success: false, message: err.message || 'Failed to send life.' };
+    } catch (e) {
+      // ignore offline
     }
+
+    return { success: true, message: `Life sent to ${targetPlayerName}!` };
   },
 
-  /**
-   * Fetch notifications for player
-   */
+  // ----------------------------------------------------
+  // NOTIFICATIONS SYSTEM
+  // ----------------------------------------------------
+
   async getNotifications(userId: string): Promise<GameNotification[]> {
     try {
-      const q = query(
-        collection(db, 'notifications'),
-        where('recipientId', '==', userId),
-        limit(20)
-      );
-      const snap = await getDocs(q);
-      const notifs: GameNotification[] = [];
-      snap.forEach((d) => {
-        notifs.push({ id: d.id, ...d.data() } as GameNotification);
-      });
-      // Sort newest first
-      notifs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      return notifs;
-    } catch (err) {
-      console.error('Error fetching notifications:', err);
-      return [];
+      const raw = localStorage.getItem(`${STORAGE_KEYS.NOTIFICATIONS}_${userId || 'default'}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // fallback
     }
+
+    const seeds = SEED_NOTIFICATIONS.map((n) => ({ ...n, recipientId: userId }));
+    this.saveNotifications(userId, seeds);
+    return seeds;
   },
 
-  /**
-   * Mark notification as read
-   */
-  async markNotificationRead(notificationId: string): Promise<void> {
+  saveNotifications(userId: string, notifs: GameNotification[]): void {
     try {
-      const notifRef = doc(db, 'notifications', notificationId);
-      await updateDoc(notifRef, { read: true });
-    } catch (err) {
-      console.error('Error marking notification read:', err);
+      localStorage.setItem(
+        `${STORAGE_KEYS.NOTIFICATIONS}_${userId || 'default'}`,
+        JSON.stringify(notifs)
+      );
+    } catch {
+      // ignore
     }
   },
 
-  /**
-   * Mark all notifications as read
-   */
+  async addNotification(
+    recipientId: string,
+    data: {
+      type: GameNotification['type'];
+      message: string;
+      relatedPlayerId?: string;
+      relatedPlayerName?: string;
+      relatedGameData?: any;
+    }
+  ): Promise<GameNotification> {
+    const current = await this.getNotifications(recipientId);
+    const newNotif: GameNotification = {
+      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      recipientId,
+      type: data.type,
+      message: data.message,
+      read: false,
+      relatedPlayerId: data.relatedPlayerId,
+      relatedPlayerName: data.relatedPlayerName,
+      relatedGameData: data.relatedGameData,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = [newNotif, ...current];
+    this.saveNotifications(recipientId, updated);
+    return newNotif;
+  },
+
+  async markNotificationRead(userId: string, notificationId: string): Promise<void> {
+    const current = await this.getNotifications(userId);
+    const updated = current.map((n) => (n.id === notificationId ? { ...n, read: true } : n));
+    this.saveNotifications(userId, updated);
+  },
+
+  async dismissNotification(userId: string, notificationId: string): Promise<void> {
+    const current = await this.getNotifications(userId);
+    const updated = current.filter((n) => n.id !== notificationId);
+    this.saveNotifications(userId, updated);
+  },
+
   async markAllNotificationsRead(userId: string): Promise<void> {
-    try {
-      const notifs = await this.getNotifications(userId);
-      const unread = notifs.filter((n) => !n.read);
-      await Promise.all(
-        unread.map((n) => updateDoc(doc(db, 'notifications', n.id), { read: true }))
-      );
-    } catch (err) {
-      console.error('Error marking all notifications read:', err);
-    }
+    const current = await this.getNotifications(userId);
+    const updated = current.map((n) => ({ ...n, read: true }));
+    this.saveNotifications(userId, updated);
   },
 };

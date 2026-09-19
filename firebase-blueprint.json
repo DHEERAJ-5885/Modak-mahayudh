@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Firebase Schema Blueprint for Ganesh Chaturthi Match-3",
+  "entities": {
+    "Player": {
+      "collection": "players",
+      "description": "Authenticated player profile, currency, lives, and overall progression",
+      "fields": {
+        "id": { "type": "string", "description": "Firebase Auth user UID" },
+        "displayName": { "type": "string", "description": "In-game display name" },
+        "email": { "type": "string", "description": "Player email" },
+        "avatar": { "type": "string", "description": "Avatar key or icon" },
+        "currentLevel": { "type": "number", "description": "Current level" },
+        "highestLevel": { "type": "number", "description": "Highest level unlocked" },
+        "totalScore": { "type": "number", "description": "Total accumulated score" },
+        "bestScore": { "type": "number", "description": "Highest score across all levels" },
+        "stars": { "type": "number", "description": "Total stars accumulated" },
+        "lives": { "type": "number", "description": "Current lives count (0-5)" },
+        "maxLives": { "type": "number", "description": "Max lives capacity (5)" },
+        "coins": { "type": "number", "description": "Temple modak coins" },
+        "streakDays": { "type": "number", "description": "Consecutive login streak" },
+        "unlockedPowers": { "type": "array", "description": "List of unlocked power keys" },
+        "achievements": { "type": "array", "description": "List of unlocked achievement keys" },
+        "campus": { "type": "string", "description": "Selected campus/mandir" },
+        "soundEnabled": { "type": "boolean", "description": "Audio preference" },
+        "reducedMotion": { "type": "boolean", "description": "Reduced motion preference" },
+        "createdAt": { "type": "string", "description": "Account registration timestamp" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp" }
+      }
+    },
+    "LevelProgress": {
+      "collection": "level_progress",
+      "description": "Granular level progression and high scores per level per player",
+      "fields": {
+        "id": { "type": "string", "description": "{playerId}_{levelId}" },
+        "playerId": { "type": "string", "description": "Player Auth UID" },
+        "levelId": { "type": "number", "description": "Level number (1-10)" },
+        "completed": { "type": "boolean", "description": "Whether level has been completed" },
+        "stars": { "type": "number", "description": "Stars earned (0-3)" },
+        "bestScore": { "type": "number", "description": "Best score on this level" },
+        "highScore": { "type": "number", "description": "High score on this level" },
+        "unlocked": { "type": "boolean", "description": "Whether level is unlocked" },
+        "updatedAt": { "type": "string", "description": "Timestamp of last play" }
+      }
+    },
+    "Friend": {
+      "collection": "friends",
+      "description": "Bidirectional confirmed friendships",
+      "fields": {
+        "id": { "type": "string", "description": "Doc ID" },
+        "playerId": { "type": "string", "description": "Player UID" },
+        "friendId": { "type": "string", "description": "Friend UID" },
+        "friendName": { "type": "string", "description": "Friend display name" },
+        "friendAvatar": { "type": "string", "description": "Friend avatar key" },
+        "friendLevel": { "type": "number", "description": "Friend highest level" },
+        "createdAt": { "type": "string", "description": "Created timestamp" }
+      }
+    },
+    "FriendRequest": {
+      "collection": "friend_requests",
+      "description": "Pending, accepted, or declined friend requests",
+      "fields": {
+        "id": { "type": "string", "description": "Doc ID" },
+        "senderId": { "type": "string", "description": "Sender UID" },
+        "senderName": { "type": "string", "description": "Sender display name" },
+        "senderAvatar": { "type": "string", "description": "Sender avatar key" },
+        "receiverId": { "type": "string", "description": "Receiver UID" },
+        "receiverName": { "type": "string", "description": "Receiver display name" },
+        "status": { "type": "string", "description": "pending | accepted | rejected" },
+        "createdAt": { "type": "string", "description": "Request timestamp" }
+      }
+    },
+    "LifeRequest": {
+      "collection": "life_requests",
+      "description": "Life requests sent between players",
+      "fields": {
+        "id": { "type": "string", "description": "Doc ID" },
+        "senderId": { "type": "string", "description": "Requester UID" },
+        "senderName": { "type": "string", "description": "Requester display name" },
+        "receiverId": { "type": "string", "description": "Target friend UID" },
+        "receiverName": { "type": "string", "description": "Target friend display name" },
+        "status": { "type": "string", "description": "pending | sent | claimed" },
+        "createdAt": { "type": "string", "description": "Request timestamp" }
+      }
+    },
+    "Notification": {
+      "collection": "notifications",
+      "description": "Player notifications for friend requests, life gifts, and milestones",
+      "fields": {
+        "id": { "type": "string", "description": "Doc ID" },
+        "recipientId": { "type": "string", "description": "Target player UID" },
+        "type": { "type": "string", "description": "friend_request | friend_accepted | life_request | life_sent | high_score" },
+        "message": { "type": "string", "description": "Notification message text" },
+        "read": { "type": "boolean", "description": "Whether read by user" },
+        "relatedPlayerId": { "type": "string", "description": "Related player UID" },
+        "createdAt": { "type": "string", "description": "Timestamp" }
+      }
+    },
+    "Leaderboard": {
+      "collection": "leaderboard",
+      "description": "Global competitive scores backed by authenticated player accounts",
+      "fields": {
+        "id": { "type": "string", "description": "Unique score submission ID" },
+        "playerId": { "type": "string", "description": "Player UID" },
+        "playerName": { "type": "string", "description": "Player display name" },
+        "campus": { "type": "string", "description": "Campus/Mandir affiliation" },
+        "level": { "type": "number", "description": "Level number" },
+        "score": { "type": "number", "description": "Score achieved" },
+        "bestScore": { "type": "number", "description": "Player best score" },
+        "obstaclesDefeated": { "type": "number", "description": "Vighnas defeated" },
+        "completionTime": { "type": "number", "description": "Completion time in seconds" },
+        "timestamp": { "type": "number", "description": "Unix timestamp ms" }
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Modak Mahayudh",
+  "description": "A festive Match-3 defense adventure channeling divine Prana into Lord Ganesha and loyal Mushak to purify mischievous Vighnas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

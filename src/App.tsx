@@ -16,6 +16,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { ProfileModal } from './components/ProfileModal';
 import { SocialModal } from './components/SocialModal';
 import { NotificationsModal } from './components/NotificationsModal';
+import { HowToPlayModal } from './components/HowToPlayModal';
 import { Toast } from './components/Toast';
 import { playSound } from './utils/sound';
 import { storageService } from './services/storageService';
@@ -49,6 +50,7 @@ export default function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; icon?: string } | null>(null);
 
   const showToast = useCallback((message: string, icon: string = 'check_circle') => {
@@ -505,6 +507,7 @@ export default function App() {
               onClaimQuest={handleClaimQuest}
               questClaimed={questClaimed}
               questProgress={questProgress}
+              onOpenHowToPlay={() => setIsHowToPlayOpen(true)}
             />
           )}
 
@@ -515,6 +518,7 @@ export default function App() {
               player={player}
               onSelectLevel={(id) => setActiveLevelId(id)}
               onStartBattle={handleStartBattle}
+              onOpenHowToPlay={() => setIsHowToPlayOpen(true)}
             />
           )}
 
@@ -593,6 +597,13 @@ export default function App() {
           onRefreshNotifications={refreshNotifications}
           onUpdatePlayer={(updated) => setPlayer(updated)}
           onShowToast={showToast}
+        />
+
+        {/* How to Play Guide Modal */}
+        <HowToPlayModal
+          isOpen={isHowToPlayOpen}
+          onClose={() => setIsHowToPlayOpen(false)}
+          soundEnabled={player.soundEnabled}
         />
 
         {/* Toast Notifications */}

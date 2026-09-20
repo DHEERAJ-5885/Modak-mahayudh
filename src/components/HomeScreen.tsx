@@ -12,6 +12,7 @@ interface HomeScreenProps {
   onClaimQuest: () => void;
   questClaimed: boolean;
   questProgress: number;
+  onOpenHowToPlay?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -22,6 +23,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onClaimQuest,
   questClaimed,
   questProgress,
+  onOpenHowToPlay,
 }) => {
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; color: string }[]>([]);
 
@@ -76,6 +78,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               Chaturthi Utsav Live
             </span>
           </div>
+
+          {/* How to Play Guide Pill */}
+          {onOpenHowToPlay && (
+            <button
+              id="home-hero-how-to-play-btn"
+              onClick={() => {
+                playSound('click', player.soundEnabled);
+                onOpenHowToPlay();
+              }}
+              className="absolute top-3 right-3 sm:right-4 flex items-center gap-1.5 bg-[#1c012d]/90 hover:bg-[#3a1d4a] backdrop-blur-md px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.5)] border border-[#ffe16d]/40 transition-transform active:scale-95 cursor-pointer z-10"
+              title="How to Play Guide"
+            >
+              <AppIcon name="help" size={13} className="text-[#ffe16d]" />
+              <span className="font-body text-[10px] sm:text-[11px] text-[#ffe16d] uppercase tracking-wider font-extrabold">
+                How to Play
+              </span>
+            </button>
+          )}
 
           {/* Bottom Title & Streak Pill */}
           <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 flex items-end justify-between gap-2 pointer-events-none">
@@ -162,6 +182,36 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <AppIcon name="keyboard_double_arrow_right" size={20} className="text-white animate-bounce shrink-0" />
           </button>
         </div>
+
+        {/* HOW TO PLAY & BATTLE GUIDE CARD */}
+        {onOpenHowToPlay && (
+          <button
+            id="home-how-to-play-card-btn"
+            onClick={() => {
+              playSound('click', player.soundEnabled);
+              onOpenHowToPlay();
+            }}
+            className="w-full bg-gradient-to-r from-[#2b0e3b] via-[#3a1d4a] to-[#2b0e3b] rounded-2xl p-2.5 sm:p-3 shadow-md flex items-center justify-between border border-[#ffdb3c]/40 hover:border-[#ffdb3c] transition-all cursor-pointer active:scale-98"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-[#ff9100] to-[#ff6f00] flex items-center justify-center text-white shadow border border-[#ffe16d]/40 shrink-0">
+                <AppIcon name="help" size={18} className="text-white" />
+              </div>
+              <div className="flex flex-col text-left min-w-0">
+                <span className="font-display text-[12px] sm:text-[13px] font-extrabold text-[#ffdb3c] truncate">
+                  How to Play & Battle Guide
+                </span>
+                <span className="font-body text-[10px] sm:text-[11px] text-[#e1bfb0] truncate">
+                  Master Modak specials, Prana powers & demon defense
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 bg-[#ffdb3c]/20 px-2.5 py-1 rounded-full border border-[#ffdb3c]/40 shrink-0">
+              <span className="font-body text-[10px] font-bold text-[#ffe16d]">GUIDE</span>
+              <AppIcon name="chevron_right" size={13} className="text-[#ffe16d]" />
+            </div>
+          </button>
+        )}
 
         {/* 4-COLUMN SHORTCUT TILES */}
         <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full">

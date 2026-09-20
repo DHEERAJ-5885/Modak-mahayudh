@@ -9,6 +9,7 @@ interface WorldMapScreenProps {
   player: PlayerProfile;
   onSelectLevel: (levelId: number) => void;
   onStartBattle: (levelId: number) => void;
+  onOpenHowToPlay?: () => void;
 }
 
 interface MapNodeDefinition {
@@ -97,6 +98,7 @@ export const WorldMapScreen: React.FC<WorldMapScreenProps> = ({
   player,
   onSelectLevel,
   onStartBattle,
+  onOpenHowToPlay,
 }) => {
   const [selectedModalLevel, setSelectedModalLevel] = useState<LevelConfig | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; icon: string } | null>(null);
@@ -162,15 +164,31 @@ export const WorldMapScreen: React.FC<WorldMapScreenProps> = ({
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 bg-[#1c012d]/90 px-2.5 py-0.5 rounded-full border border-[#ffdb3c]/30">
-          <span className="font-hud text-[11px] text-[#ffe16d] font-bold">
-            Lvl {currentActiveLevel.id}/10
-          </span>
+        <div className="flex items-center gap-1.5">
+          {onOpenHowToPlay && (
+            <button
+              id="map-ribbon-guide-btn"
+              onClick={() => {
+                playSound('click', player.soundEnabled);
+                onOpenHowToPlay();
+              }}
+              className="flex items-center gap-1 bg-[#ffdb3c]/20 hover:bg-[#ffdb3c]/30 px-2 py-0.5 rounded-full border border-[#ffdb3c]/40 text-[#ffe16d] text-[10px] font-bold transition-all cursor-pointer active:scale-95"
+              title="How to Play Guide"
+            >
+              <AppIcon name="help" size={12} />
+              <span>Guide</span>
+            </button>
+          )}
+          <div className="flex items-center gap-1.5 bg-[#1c012d]/90 px-2.5 py-0.5 rounded-full border border-[#ffdb3c]/30">
+            <span className="font-hud text-[11px] text-[#ffe16d] font-bold">
+              Lvl {currentActiveLevel.id}/10
+            </span>
+          </div>
         </div>
       </div>
 
       {/* FLOATING SIDE WIDGETS */}
-      <div className="absolute top-12 left-2 z-30">
+      <div className="absolute top-12 left-2 z-30 flex flex-col gap-2">
         <button
           onClick={() => showToast('Utsav Pass: Reach Level 5 to claim 150 Gems!', 'featured_seasonal_and_gifts')}
           className="bg-gradient-to-br from-[#ff6f00] via-[#ffdb3c] to-[#ff6f00] p-0.5 rounded-2xl shadow-[0_6px_16px_rgba(255,111,0,0.5)] active:scale-95 transition-transform flex flex-col items-center cursor-pointer"
@@ -187,6 +205,24 @@ export const WorldMapScreen: React.FC<WorldMapScreenProps> = ({
             <span className="text-[7px] text-[#ffb691] font-bold">Free Tier</span>
           </div>
         </button>
+
+        {onOpenHowToPlay && (
+          <button
+            id="map-floating-guide-btn"
+            onClick={() => {
+              playSound('click', player.soundEnabled);
+              onOpenHowToPlay();
+            }}
+            className="bg-gradient-to-br from-[#ffe16d] via-[#ff9800] to-[#ff6f00] p-0.5 rounded-2xl shadow-[0_6px_16px_rgba(255,111,0,0.5)] active:scale-95 transition-transform flex flex-col items-center cursor-pointer"
+            title="How to Play Guide"
+          >
+            <div className="bg-[#2b0e3b] px-2 py-1 rounded-[14px] flex flex-col items-center">
+              <AppIcon name="help" size={22} className="text-[#ffe16d]" />
+              <span className="font-body text-[8px] text-[#ffe16d] font-bold mt-0.5">GUIDE</span>
+              <span className="text-[7px] text-[#ffb691] font-bold">HOW TO PLAY</span>
+            </div>
+          </button>
+        )}
       </div>
 
       <div className="absolute top-12 right-2 z-30">

@@ -344,6 +344,45 @@
   animation: comboPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+/* Continuous Demon Movement & Pandal Barrier Animations */
+@keyframes demonBobbing {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.demon-moving-bob {
+  animation: demonBobbing 0.9s ease-in-out infinite;
+}
+
+@keyframes barrierImpactFlare {
+  0% {
+    box-shadow: 0 0 0 rgba(255, 219, 60, 0);
+    filter: brightness(1);
+  }
+  30% {
+    box-shadow: 0 0 35px rgba(255, 255, 255, 1), -10px 0 25px rgba(255, 219, 60, 0.9);
+    filter: brightness(2.2);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(255, 219, 60, 0);
+    filter: brightness(1);
+  }
+}
+
+.barrier-impact-active {
+  animation: barrierImpactFlare 0.4s ease-out forwards;
+}
+
+@keyframes targetReticleSpinPulse {
+  0% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 6px #ffe16d); }
+  50% { transform: rotate(180deg) scale(1.18); filter: drop-shadow(0 0 14px #ffdb3c); }
+  100% { transform: rotate(360deg) scale(1); filter: drop-shadow(0 0 6px #ffe16d); }
+}
+
+.target-reticle-anim {
+  animation: targetReticleSpinPulse 2s linear infinite;
+}
+
 /* Reduced motion support */
 body.reduced-motion * {
   animation-duration: 0.001ms !important;

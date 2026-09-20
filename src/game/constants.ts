@@ -26,11 +26,11 @@ export const MATCH_SCORES = {
 };
 
 export const PRANA_ENERGY = {
-  MATCH_3: 10,
-  MATCH_4: 25,
+  MATCH_3: 20,
+  MATCH_4: 35,
   MATCH_5: 50,
-  SPECIAL_PIECE_POP: 25,
-  CASCADE_BONUS: 10,
+  SPECIAL_PIECE_POP: 30,
+  CASCADE_BONUS: 15,
   MAX_ENERGY: 100,
 };
 

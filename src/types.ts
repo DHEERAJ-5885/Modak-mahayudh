@@ -37,6 +37,11 @@ export interface VighnaEnemy {
   img: string;
   isShielded?: boolean;
   isDefeated?: boolean;
+  progress: number; // 0 (far right portal) to 100 (pandal boundary)
+  lane: number; // 0, 1, 2 for vertical lane separation
+  attackPower?: number; // Pandal protection damage per strike
+  isAttacking?: boolean;
+  attackCooldown?: number;
 }
 
 export type ObjectiveType = 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { LevelConfig, PlayerProfile, ModakTile, ModakType, VighnaEnemy } from '../types';
 import { ASSETS } from '../data/gameData';
 import { playSound, playComboSound, playInvalidSwapSound } from '../utils/sound';
@@ -13,7 +13,7 @@ import {
   findPossibleMove,
   MatchResult,
 } from '../game/matchEngine';
-import { createObstacleWave, advanceObstacles } from '../game/obstacles';
+import { createObstacleWave, advanceObstacles, updateEnemiesContinuous, getDistanceFromProgress } from '../game/obstacles';
 import {
   MATCH_SCORES,
   PRANA_ENERGY,
@@ -71,6 +71,8 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
   const [activeProjectile, setActiveProjectile] = useState<{
     type: 'trident' | 'divine_blast' | 'festival_light';
     targetIds: string[];
+    targetProgress?: number;
+    targetLane?: number;
   } | null>(null);
   const [hitEnemyIds, setHitEnemyIds] = useState<Set<string>>(new Set());
   const [defeatedEnemyIds, setDefeatedEnemyIds] = useState<Set<string>>(new Set());
@@ -78,6 +80,11 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
   const battleStartTimeRef = useRef<number>(Date.now());
   const lastInteractionTimeRef = useRef<number>(Date.now());
   const didSwipeRef = useRef<boolean>(false);
+
+  // Continuous Real-time Movement & Combat State
+  const [selectedEnemyId, setSelectedEnemyId] = useState<string | null>(null);
+  const [barrierFlash, setBarrierFlash] = useState<boolean>(false);
+  const lastTickTimeRef = useRef<number>(Date.now());
 
   const [impactFloater, setImpactFloater] = useState<{ text: string; pts: string } | null>(null);
   const [pranaParticles, setPranaParticles] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -123,6 +130,49 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
     }, 2000);
   }, []);
 
+  // Determine currently targeted enemy (either player-selected or closest to Pandal)
+  const targetedEnemy = useMemo(() => {
+    const living = activeEnemies.filter((e) => e.hp > 0 && !defeatedEnemyIds.has(e.id));
+    if (living.length === 0) return null;
+    if (selectedEnemyId) {
+      const found = living.find((e) => e.id === selectedEnemyId);
+      if (found) return found;
+    }
+    // Default to the enemy closest to the Pandal (highest progress toward barrier)
+    return living.slice().sort((a, b) => b.progress - a.progress)[0];
+  }, [activeEnemies, defeatedEnemyIds, selectedEnemyId]);
+
+  // Respectful Pandal Barrier Impact Callback
+  const triggerBarrierImpact = useCallback(
+    (enemy: VighnaEnemy) => {
+      // 1. Flash Pandal Rangoli Barrier with golden-white spark aura
+      setBarrierFlash(true);
+      setTimeout(() => setBarrierFlash(false), 360);
+
+      // 2. Play respectful barrier shield absorption sound
+      playSound('impact', player.soundEnabled);
+
+      // 3. Screen tremor
+      setScreenShaking(true);
+      setTimeout(() => setScreenShaking(false), 260);
+
+      // 4. Reduce Pandal protection aura
+      const dmg = enemy.attackPower || 16;
+      setProtectionAura((prev) => {
+        const next = Math.max(0, prev - dmg);
+        if (next <= 0) {
+          // PANDAL BREACHED!
+          setGameOver('lost');
+          playSound('defeat', player.soundEnabled);
+        }
+        return next;
+      });
+
+      showToast(`⚠️ PANDAL BARRIER STRUCK! (-${dmg}%)`, 'shield');
+    },
+    [player.soundEnabled, showToast]
+  );
+
   // Initialize Game on level change / start
   const initializeGame = useCallback(() => {
     setScore(0);
@@ -144,35 +194,73 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
     setSwapAnimation(null);
     setIdleHint(null);
     setComboBanner(null);
+    setSelectedEnemyId(null);
+    setBarrierFlash(false);
     lastInteractionTimeRef.current = Date.now();
+    lastTickTimeRef.current = Date.now();
 
     // Generate Guaranteed Legal, Non-Matching Initial Board respecting level color pool
     const newBoard = generateInitialBoard(level.hasRootedTiles, level.allowedColors);
     setBoard(newBoard);
 
-    // Initialize Obstacle Wave Queue
+    // Initialize Continuous Obstacle Wave Queue
     battleStartTimeRef.current = Date.now();
     const fullWave = createObstacleWave(level);
-    const initialActive = fullWave.slice(0, 3);
-    // Ensure the first active has 'boundary' distance
-    if (initialActive.length > 0) {
-      initialActive[0].distance = 'boundary';
-    }
-    if (initialActive.length > 1) {
-      initialActive[1].distance = 'med';
-    }
-    if (initialActive.length > 2) {
-      initialActive[2].distance = 'far';
-    }
-    setActiveEnemies(initialActive);
-    enemyWaveQueueRef.current = fullWave.slice(3);
 
-    showToast(`LEVEL ${level.id} • DEFURGE ${level.vighnasToDefeat} VIGHNAS!`, 'temple_hindu');
+    let initialActive: VighnaEnemy[] = [];
+    if (level.id === 1) {
+      // Level 1: 1 incoming demon with generous runway to learn matching and powers naturally
+      initialActive = [
+        {
+          ...fullWave[0],
+          progress: 8,
+          lane: 1,
+          distance: 'far',
+        },
+      ];
+      enemyWaveQueueRef.current = fullWave.slice(1);
+    } else {
+      // Levels 2+: 2 to 3 active advancing demons spread across lanes
+      const activeCount = Math.min(3, fullWave.length);
+      initialActive = fullWave.slice(0, activeCount).map((enemy, idx) => {
+        const prog = Math.max(0, 18 - idx * 8);
+        return {
+          ...enemy,
+          progress: prog,
+          lane: idx % 3,
+          distance: getDistanceFromProgress(prog),
+        };
+      });
+      enemyWaveQueueRef.current = fullWave.slice(activeCount);
+    }
+
+    setActiveEnemies(initialActive);
+    showToast(`LEVEL ${level.id} • PURGE ${level.obstaclesRequired || level.vighnasToDefeat} VIGHNAS!`, 'temple_hindu');
   }, [level, showToast]);
 
   useEffect(() => {
     initializeGame();
   }, [initializeGame]);
+
+  // Real-time Continuous Movement Loop (Demons physically advance toward Pandal)
+  useEffect(() => {
+    if (gameOver !== null) return;
+
+    const ticker = setInterval(() => {
+      const now = Date.now();
+      const deltaSeconds = Math.min(0.1, (now - lastTickTimeRef.current) / 1000);
+      lastTickTimeRef.current = now;
+
+      setActiveEnemies((prevEnemies) => {
+        if (prevEnemies.length === 0) return prevEnemies;
+        return updateEnemiesContinuous(prevEnemies, deltaSeconds, (breachingEnemy) => {
+          triggerBarrierImpact(breachingEnemy);
+        });
+      });
+    }, 45);
+
+    return () => clearInterval(ticker);
+  }, [gameOver, triggerBarrierImpact]);
 
   // Spawns floating score text at coordinates
   const spawnScoreFloater = (x: number, y: number, text: string) => {
@@ -405,25 +493,9 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
         await resolveBoardMatches(settledBoard, cascadeMatches, cascadeLevel + 1);
       } else {
         // Cascade chain finished! Board is completely stable.
-        // Step active obstacles closer
-        setActiveEnemies((curEnemies) =>
-          advanceObstacles(curEnemies, (breachingEnemy) => {
-            // Obstacle breaches the festival boundary!
-            playSound('defeat', player.soundEnabled);
-            setProtectionAura((aura) => {
-              const newAura = Math.max(0, aura - OBSTACLE_BREACH_PENALTY);
-              if (newAura <= 0) {
-                setGameOver('lost');
-              }
-              return newAura;
-            });
-            showToast(`BREACH RISK! ${breachingEnemy.name} hit the boundary!`, 'warning');
-          })
-        );
-
         // Check moves left for loss condition (only if game is not already won)
         setMovesLeft((moves) => {
-          if (moves <= 0 && vighnasDefeated < level.vighnasToDefeat && gameOver !== 'won') {
+          if (moves <= 0 && vighnasDefeated < (level.obstaclesRequired || level.vighnasToDefeat) && gameOver !== 'won') {
             setGameOver('lost');
           }
           return moves;
@@ -690,7 +762,7 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
   const handleActivatePower = useCallback(
     async (powerType: 'trident' | 'divine_blast' | 'festival_light') => {
       // 1. Prevent duplicate activation & validate state
-      if (isActivatingPowerRef.current || isProcessing || gameOver) {
+      if (isActivatingPowerRef.current || gameOver) {
         return;
       }
       if (pranaEnergy < 100) {
@@ -708,22 +780,28 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
         return;
       }
 
-      // Synchronous Lock (Rule 1 & 7)
+      // Synchronous Lock
       isActivatingPowerRef.current = true;
-      setIsProcessing(true);
       setPranaEnergy(0);
 
-      // Detect Target Obstacle(s) (Rule 4)
+      // Detect Target Obstacle(s)
       let targetIds: string[] = [];
+      let targetProg = 50;
+      let targetLn = 1;
+
       if (powerType === 'trident') {
-        const crit = activeEnemies.find((e) => e.distance === 'boundary' && e.hp > 0) || activeEnemies.find((e) => e.hp > 0);
-        if (crit) targetIds = [crit.id];
+        const target = targetedEnemy || activeEnemies.find((e) => e.hp > 0);
+        if (target) {
+          targetIds = [target.id];
+          targetProg = target.progress;
+          targetLn = target.lane;
+        }
       } else {
-        // Divine Blast & Festival Light affect all active obstacles
+        // Divine Blast & Festival Light affect all active moving obstacles
         targetIds = activeEnemies.filter((e) => e.hp > 0).map((e) => e.id);
       }
 
-      // 2. Play Ganesha power animation
+      // 2. Play Ganesha power animation & cast sound
       const statusText =
         powerType === 'trident'
           ? 'UNLEASHING TRIDENT!'
@@ -733,24 +811,26 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
       setGaneshaStatus(statusText as any);
       playSound(powerType === 'trident' ? 'trident' : 'power', player.soundEnabled);
 
-      // 3. Create visible trident / divine-energy projectile from Ganesha side toward target obstacle
+      // 3. Create visible projectile traveling from Ganesha toward target demon
       setActiveProjectile({
         type: powerType,
         targetIds,
+        targetProgress: targetProg,
+        targetLane: targetLn,
       });
       setTridentSurging(true);
 
-      // Projectile flight duration
-      await new Promise((res) => setTimeout(res, 480));
+      // Projectile flight duration (~320ms for responsive action feel)
+      await new Promise((res) => setTimeout(res, 320));
 
-      // 5. Apply damage to real game state
+      // 4. Apply damage, screen tremor & physical knockback
       const damageAmount = powerType === 'trident' ? 3 : 2;
       setScreenShaking(true);
-      setTimeout(() => setScreenShaking(false), 350);
+      setTimeout(() => setScreenShaking(false), 280);
       playSound('impact', player.soundEnabled);
 
       setHitEnemyIds(new Set(targetIds));
-      setTimeout(() => setHitEnemyIds(new Set()), 400);
+      setTimeout(() => setHitEnemyIds(new Set()), 350);
 
       let newlyDefeated = 0;
       let scoreGained = 0;
@@ -766,9 +846,16 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
             scoreGained += enemy.type === 'boss' ? MATCH_SCORES.BOSS_DEFEAT : MATCH_SCORES.OBSTACLE_DEFEAT;
             defeatedSet.add(enemy.id);
           }
+
+          // Physical knockback pushing demon away from Pandal
+          const knockback = powerType === 'trident' ? 16 : 10;
+          const newProg = Math.max(0, enemy.progress - knockback);
+
           return {
             ...enemy,
             hp: newHp,
+            progress: newProg,
+            distance: getDistanceFromProgress(newProg),
             isShielded: false,
             isDefeated: isDead,
           };
@@ -789,12 +876,13 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
         pts: `-${damageAmount} HP ${newlyDefeated > 0 ? `• ${newlyDefeated} PURGED!` : ''}`,
       });
 
-      // 6. If health reaches zero: defeat obstacle, increment obstaclesDefeated, award score, trigger defeat animation
+      // 5. If health reaches zero: defeat obstacle, award score & check wave completion
       if (newlyDefeated > 0) {
         setScore((s) => s + scoreGained);
         setVighnasDefeated((prevCount) => {
           const nextCount = prevCount + newlyDefeated;
-          if (nextCount >= level.vighnasToDefeat) {
+          const targetToWin = level.obstaclesRequired || level.vighnasToDefeat;
+          if (nextCount >= targetToWin) {
             setTimeout(() => {
               setGameOver('won');
               playSound('victory', player.soundEnabled);
@@ -802,15 +890,15 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
               const stars = starScore >= level.targetScore ? 3 : starScore >= level.targetScore * 0.7 ? 2 : 1;
               const completionTime = Math.max(1, Math.round((Date.now() - battleStartTimeRef.current) / 1000));
               onVictory(starScore, movesLeft, stars, nextCount, completionTime);
-            }, 900);
+            }, 800);
           }
           return nextCount;
         });
       }
 
-      // If Power 3 (Festival Light): Clear selected central 3x3 section of modaks on the board
+      // If Festival Light: Clear selected central 3x3 section of modaks on the board
       if (powerType === 'festival_light') {
-        await new Promise((res) => setTimeout(res, 200));
+        await new Promise((res) => setTimeout(res, 180));
         const centerMatchedIds = new Set<string>();
         setBoard((prev) =>
           prev.map((row, r) =>
@@ -827,23 +915,25 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
         setScore((s) => s + 250);
         spawnScoreFloater(180, 260, '+250 FESTIVAL LIGHT!');
 
-        await new Promise((res) => setTimeout(res, 250));
+        await new Promise((res) => setTimeout(res, 220));
         setBoard((prev) => applyGravityAndRefill(prev, centerMatchedIds));
       }
 
-      // Wait for defeat animation (400ms)
-      await new Promise((res) => setTimeout(res, 400));
+      // Defeat burst animation duration (~320ms)
+      await new Promise((res) => setTimeout(res, 320));
 
-      // Remove defeated obstacles and bring next ones from wave queue into active positions
+      // Remove defeated obstacles and bring reinforcements from wave queue
       setActiveEnemies((cur) => {
         const remaining = cur.filter((e) => !defeatedSet.has(e.id));
-        if (remaining.length > 0) remaining[0].distance = 'boundary';
-        if (remaining.length > 1) remaining[1].distance = 'med';
-        if (remaining.length > 2) remaining[2].distance = 'far';
+        const maxSimultaneous = level.id === 1 ? 1 : 3;
 
-        while (remaining.length < 3 && enemyWaveQueueRef.current.length > 0) {
+        while (remaining.length < maxSimultaneous && enemyWaveQueueRef.current.length > 0) {
           const next = enemyWaveQueueRef.current.shift()!;
-          next.distance = remaining.length === 0 ? 'boundary' : remaining.length === 1 ? 'med' : 'far';
+          const usedLanes = new Set(remaining.map((r) => r.lane));
+          const freeLane = [0, 1, 2].find((l) => !usedLanes.has(l)) ?? (remaining.length % 3);
+          next.progress = 0;
+          next.lane = freeLane;
+          next.distance = 'far';
           remaining.push(next);
         }
         return remaining;
@@ -854,26 +944,26 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
       setActiveProjectile(null);
       setTridentSurging(false);
       setGaneshaStatus('CALM GUARDIAN');
-      setTimeout(() => setImpactFloater(null), 1200);
+      setTimeout(() => setImpactFloater(null), 1000);
 
-      // 8. Re-enable gameplay
+      // Re-enable power activation
       isActivatingPowerRef.current = false;
-      setIsProcessing(false);
     },
     [
-      isProcessing,
+      activeEnemies,
       gameOver,
-      pranaEnergy,
       isDivineBlastUnlocked,
       isFestivalLightUnlocked,
-      player.soundEnabled,
-      activeEnemies,
-      level.vighnasToDefeat,
+      level.obstaclesRequired,
       level.targetScore,
-      score,
+      level.vighnasToDefeat,
       movesLeft,
       onVictory,
+      player.soundEnabled,
+      pranaEnergy,
+      score,
       showToast,
+      targetedEnemy,
     ]
   );
 
@@ -1071,20 +1161,23 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
           </div>
         </div>
 
-        {/* COMBAT CORRIDOR: LORD GANESHA VS INCOMING OBSTACLES */}
-        <div className="relative z-20 flex-1 flex items-center justify-between px-1 my-1">
-          {/* ================= LEFT: LORD GANESHA GUARDIAN ================= */}
-          <div className="relative flex flex-col items-center shrink-0 w-28">
+        {/* COMBAT CORRIDOR: LORD GANESHA VS CONTINUOUSLY ADVANCING VIGHNAS */}
+        <div className="relative z-20 flex-1 min-h-[175px] max-h-[210px] w-full my-1 rounded-xl bg-gradient-to-r from-[#140021] via-[#220536] to-[#12001e] border border-[#ffdb3c]/30 shadow-inner overflow-hidden flex items-stretch">
+          {/* Ground pathway gridlines & sacred floor rangoli pattern */}
+          <div className="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(#ffdb3c_1px,transparent_1px)] [background-size:16px_16px]" />
+
+          {/* ================= ZONE A: LORD GANESHA & SACRED THRONE (LEFT 26%) ================= */}
+          <div className="relative z-20 w-[26%] min-w-[85px] max-w-[110px] flex flex-col items-center justify-center p-1 border-r border-amber-500/20 bg-gradient-to-r from-black/40 to-transparent">
             <div
-              className={`absolute -top-3 -left-2 w-28 h-28 rounded-full bg-[#ffdb3c]/20 blur-lg pointer-events-none transition-all duration-300 ${
-                isProcessing ? 'scale-150 opacity-100 bg-[#ff6f00]/40' : 'ganesha-aura-active'
+              className={`absolute inset-0 rounded-l-xl bg-[#ffdb3c]/10 pointer-events-none transition-all duration-300 ${
+                isProcessing ? 'bg-[#ff6f00]/30 shadow-[inset_0_0_20px_#ff6f00]' : 'ganesha-aura-active'
               }`}
             />
 
             <div className="relative flex flex-col items-center">
               <div
-                className={`w-20 h-20 rounded-2xl bg-gradient-to-b from-[#ffdb3c]/40 via-[#3a1d4a] to-[#1c012d] p-1 shadow-[0_0_18px_rgba(255,219,60,0.5)] border-2 transition-all duration-300 relative overflow-hidden ${
-                  isProcessing ? 'scale-110 border-white shadow-[0_0_28px_#ffe16d]' : 'border-[#ffdb3c]'
+                className={`w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-b from-[#ffdb3c]/40 via-[#3a1d4a] to-[#1c012d] p-1 shadow-[0_0_16px_rgba(255,219,60,0.5)] border-2 transition-all duration-300 relative overflow-hidden ${
+                  tridentSurging ? 'scale-110 border-white shadow-[0_0_28px_#ffe16d]' : 'border-[#ffdb3c]'
                 }`}
               >
                 <img
@@ -1093,17 +1186,17 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
                   className="w-full h-full object-cover rounded-xl"
                 />
                 <div className="absolute bottom-0.5 right-0.5 bg-[#ff6f00] text-white rounded-full p-0.5 shadow">
-                  <AppIcon name="stat_3" size={11} />
+                  <AppIcon name="stat_3" size={10} />
                 </div>
               </div>
 
-              <div className="flex flex-col items-center mt-1">
-                <span className="font-display text-[10px] text-[#ffdb3c] font-black tracking-wide uppercase drop-shadow">
+              <div className="flex flex-col items-center mt-0.5">
+                <span className="font-display text-[9px] text-[#ffdb3c] font-black tracking-wide uppercase drop-shadow leading-none">
                   LORD GANESHA
                 </span>
                 <span
-                  className={`text-[8px] font-body px-2 py-0.2 rounded-full border font-bold transition-all ${
-                    isProcessing
+                  className={`text-[7px] font-body px-1.5 py-0.2 rounded-full border font-bold mt-0.5 transition-all truncate max-w-[82px] text-center ${
+                    tridentSurging
                       ? 'bg-amber-400 text-[#341100] border-white animate-pulse'
                       : 'bg-[#3a1d4a] text-[#ffe16d] border-[#ffb691]/40'
                   }`}
@@ -1111,48 +1204,194 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
                   {ganeshaStatus}
                 </span>
               </div>
-
-              <div className="flex items-center gap-1 mt-1 bg-[#462856]/90 px-2 py-0.5 rounded-full border border-amber-500/30">
-                <div className="w-4 h-4 rounded-full overflow-hidden border border-[#ffdb3c]/50">
-                  <img src={ASSETS.mushak} alt="Mushak" className="w-full h-full object-cover" />
-                </div>
-                <span className="text-[8px] font-body text-[#ffdb3c] font-extrabold">MUSHAK READY</span>
-              </div>
             </div>
           </div>
 
-          {/* ================= CENTER: TRIDENT / DIVINE PROJECTILE BEAM ================= */}
-          <div className="relative flex-1 h-28 mx-1 flex items-center justify-center overflow-visible">
-            {/* Active Projectile */}
+          {/* ================= ZONE B: SACRED PANDAL RANGOLI SPARK BARRIER (DIVIDING LINE) ================= */}
+          <div
+            className={`relative z-20 w-3 flex flex-col items-center justify-between py-1 transition-all duration-200 ${
+              barrierFlash
+                ? 'barrier-impact-active bg-gradient-to-b from-yellow-200 via-white to-yellow-200'
+                : 'bg-gradient-to-b from-amber-500/40 via-[#ffdb3c]/60 to-amber-500/40'
+            }`}
+            title="Sacred Pandal Rangoli Barrier"
+          >
+            <div className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#ffdb3c] animate-pulse" />
+            <div className="flex-1 w-0.5 bg-gradient-to-b from-[#ffdb3c] via-white to-[#ff6f00] opacity-80" />
+            <div className="w-2 h-2 rounded-full bg-yellow-200 shadow-[0_0_8px_#fff] animate-ping" />
+            <div className="flex-1 w-0.5 bg-gradient-to-b from-[#ff6f00] via-white to-[#ffdb3c] opacity-80" />
+            <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_#ff6f00] animate-pulse" />
+          </div>
+
+          {/* ================= ZONE C: CONTINUOUS DEMONS ADVANCE CORRIDOR (RIGHT 72%) ================= */}
+          <div className="relative z-10 flex-1 h-full overflow-hidden">
+            {/* Lane Guidelines */}
+            <div className="absolute inset-x-0 top-[28%] h-px bg-white/5 pointer-events-none" />
+            <div className="absolute inset-x-0 top-[62%] h-px bg-white/5 pointer-events-none" />
+
+            {/* Distance Markers */}
+            <div className="absolute bottom-1 inset-x-2 flex justify-between text-[7px] font-hud text-amber-200/30 uppercase pointer-events-none">
+              <span>0m (Barrier)</span>
+              <span>15m</span>
+              <span>30m</span>
+              <span>45m (Spawn)</span>
+            </div>
+
+            {/* Active Moving Demons */}
+            {activeEnemies.map((enemy) => {
+              const isTargeted = targetedEnemy?.id === enemy.id;
+              const isDefeated = defeatedEnemyIds.has(enemy.id);
+              const isHit = hitEnemyIds.has(enemy.id);
+
+              // Responsive distance coordinate: progress 0 => ~86% right; progress 100 => ~6% (at barrier)
+              const leftPercent = Math.max(4, Math.min(84, 84 - enemy.progress * 0.78));
+              const laneTop =
+                enemy.lane === 0 ? '10px' : enemy.lane === 2 ? '108px' : '58px';
+              const distanceMeters = Math.max(0, Math.round((100 - enemy.progress) * 0.42));
+
+              return (
+                <div
+                  key={enemy.id}
+                  onClick={() => setSelectedEnemyId(enemy.id)}
+                  style={{
+                    left: `${leftPercent}%`,
+                    top: laneTop,
+                  }}
+                  className={`absolute -translate-x-1/2 flex flex-col items-center cursor-pointer transition-transform select-none ${
+                    isDefeated
+                      ? 'vighna-defeat-burst-anim z-30'
+                      : isHit
+                      ? 'obstacle-hit-anim z-20'
+                      : 'demon-moving-bob z-10'
+                  }`}
+                >
+                  {/* Distance in Meters & Target Badge */}
+                  <div className="flex items-center gap-0.5 mb-0.5 pointer-events-none">
+                    {isTargeted ? (
+                      <span className="text-[7px] font-hud font-black bg-amber-400 text-amber-950 px-1 rounded-full shadow-[0_0_8px_#ffdb3c] animate-bounce">
+                        🎯 {distanceMeters}m
+                      </span>
+                    ) : (
+                      <span className="text-[7px] font-hud font-bold bg-black/70 text-[#ffe16d] px-1 rounded-full border border-white/10">
+                        {distanceMeters}m
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Demon Container */}
+                  <div
+                    className={`relative rounded-xl p-0.5 transition-all duration-200 ${
+                      isTargeted
+                        ? 'target-reticle-anim scale-110 shadow-[0_0_18px_rgba(255,219,60,0.8)]'
+                        : enemy.progress > 75
+                        ? 'ring-2 ring-red-500 shadow-[0_0_14px_rgba(239,68,68,0.8)]'
+                        : 'shadow-md hover:scale-105'
+                    } ${
+                      enemy.type === 'boss'
+                        ? 'w-12 h-12 bg-gradient-to-b from-purple-700 via-[#3a1d4a] to-red-900 border-2 border-amber-300'
+                        : enemy.type === 'heavy'
+                        ? 'w-10 h-10 bg-gradient-to-b from-red-800 via-[#3a1d4a] to-black border-2 border-red-400'
+                        : enemy.type === 'fast'
+                        ? 'w-9 h-9 bg-gradient-to-b from-amber-600 via-[#3a1d4a] to-black border border-yellow-300'
+                        : 'w-9 h-9 bg-gradient-to-b from-[#462856] to-[#1c012d] border border-amber-500/40'
+                    }`}
+                  >
+                    <img
+                      src={enemy.img}
+                      alt={enemy.name}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+
+                    {/* Type / Archetype Tag */}
+                    <span
+                      className={`absolute -bottom-1 -left-1 text-[6px] font-hud font-extrabold px-1 rounded-full shadow ${
+                        enemy.type === 'boss'
+                          ? 'bg-purple-600 text-yellow-200'
+                          : enemy.type === 'heavy'
+                          ? 'bg-red-700 text-white'
+                          : enemy.type === 'fast'
+                          ? 'bg-amber-500 text-amber-950'
+                          : 'bg-black/80 text-gray-200'
+                      }`}
+                    >
+                      {enemy.type === 'boss'
+                        ? '👹 BOSS'
+                        : enemy.type === 'heavy'
+                        ? '🛡️ HEAVY'
+                        : enemy.type === 'fast'
+                        ? '⚡ FAST'
+                        : 'DEMON'}
+                    </span>
+
+                    {/* Mini Health Tag */}
+                    <span
+                      className={`absolute -top-1 -right-1 text-[7px] font-hud font-black px-1 rounded-full shadow ${
+                        enemy.hp <= 1
+                          ? 'bg-red-600 text-white animate-pulse'
+                          : 'bg-[#1c012d] text-[#ffdb3c] border border-white/20'
+                      }`}
+                    >
+                      {enemy.hp}HP
+                    </span>
+                  </div>
+
+                  {/* Micro Health Bar */}
+                  <div className="w-8 h-1 bg-black/80 rounded-full border border-white/20 overflow-hidden mt-0.5 pointer-events-none">
+                    <div
+                      className={`h-full transition-all duration-200 ${
+                        enemy.hp / enemy.maxHp > 0.5
+                          ? 'bg-emerald-400'
+                          : enemy.hp / enemy.maxHp > 0.25
+                          ? 'bg-yellow-400'
+                          : 'bg-red-500'
+                      }`}
+                      style={{ width: `${(enemy.hp / enemy.maxHp) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* In-Flight Projectile from Ganesha to Target Demon */}
             {activeProjectile && (
               <div
-                className={`absolute pointer-events-none z-30 ${
+                className={`absolute pointer-events-none z-40 transition-all ${
                   activeProjectile.type === 'trident'
-                    ? 'h-4 projectile-fly-anim'
+                    ? 'projectile-fly-anim'
                     : activeProjectile.type === 'divine_blast'
-                    ? 'h-12 divine-blast-anim'
-                    : 'h-8 projectile-fly-anim'
+                    ? 'divine-blast-anim'
+                    : 'projectile-fly-anim'
                 }`}
                 style={{
-                  top: '50%',
-                  transform: 'translateY(-50%)',
+                  left: '6%',
+                  top:
+                    (activeProjectile.targetLane ?? 1) === 0
+                      ? '18px'
+                      : (activeProjectile.targetLane ?? 1) === 2
+                      ? '115px'
+                      : '66px',
+                  width: `${Math.max(30, Math.min(82, 84 - (activeProjectile.targetProgress ?? 50) * 0.78))}%`,
                 }}
               >
                 {activeProjectile.type === 'trident' && (
-                  <div className="flex items-center gap-1 bg-gradient-to-r from-amber-300 via-[#ffdb3c] to-white rounded-full px-3 py-1 shadow-[0_0_24px_#ffe16d] border border-white">
-                    <AppIcon name="stat_3" size={18} className="text-[#552000]" />
-                    <span className="text-[9px] font-hud font-black text-[#552000] tracking-wider">TRIDENT</span>
+                  <div className="w-full flex items-center justify-end">
+                    <div className="flex items-center gap-1 bg-gradient-to-r from-amber-300 via-[#ffdb3c] to-white rounded-full px-2.5 py-0.5 shadow-[0_0_24px_#ffe16d] border border-white">
+                      <AppIcon name="stat_3" size={16} className="text-[#552000]" />
+                      <span className="text-[8px] font-hud font-black text-[#552000] tracking-wider">TRIDENT</span>
+                    </div>
                   </div>
                 )}
                 {activeProjectile.type === 'divine_blast' && (
-                  <div className="w-full h-full bg-gradient-to-r from-[#ff6f00]/70 via-[#ffdb3c] to-white/90 rounded-2xl shadow-[0_0_30px_#ff6689] flex items-center justify-end px-3">
+                  <div className="w-full h-12 bg-gradient-to-r from-[#ff6f00]/70 via-[#ffdb3c] to-white/90 rounded-2xl shadow-[0_0_30px_#ff6689] flex items-center justify-end px-3">
                     <AppIcon name="auto_awesome" size={24} className="text-white drop-shadow-[0_0_10px_#fff]" />
                   </div>
                 )}
                 {activeProjectile.type === 'festival_light' && (
-                  <div className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-300 via-amber-400 to-white rounded-full px-3 py-1.5 shadow-[0_0_28px_#ffdb3c] border-2 border-yellow-200">
-                    <AppIcon name="wb_sunny" size={18} className="text-amber-950" />
-                    <span className="text-[9px] font-hud font-black text-amber-950">FESTIVAL LIGHT</span>
+                  <div className="w-full flex items-center justify-end">
+                    <div className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-300 via-amber-400 to-white rounded-full px-2.5 py-1 shadow-[0_0_28px_#ffdb3c] border-2 border-yellow-200">
+                      <AppIcon name="wb_sunny" size={16} className="text-amber-950" />
+                      <span className="text-[8px] font-hud font-black text-amber-950">FESTIVAL LIGHT</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1160,122 +1399,65 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
 
             {/* Impact Floater */}
             {impactFloater && (
-              <div className="absolute top-2 right-4 flex flex-col items-center pointer-events-none z-40 animate-bounce bg-black/60 px-3 py-1 rounded-xl border border-[#ffdb3c]/50 shadow-[0_0_15px_rgba(255,219,60,0.4)]">
-                <span className="font-display text-[12px] text-white font-black tracking-wider uppercase drop-shadow bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">
+              <div className="absolute top-2 right-2 flex flex-col items-center pointer-events-none z-50 animate-bounce bg-black/80 px-2.5 py-1 rounded-xl border border-[#ffdb3c]/70 shadow-[0_0_18px_rgba(255,219,60,0.6)]">
+                <span className="font-display text-[11px] text-white font-black tracking-wider uppercase drop-shadow bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">
                   {impactFloater.text}
                 </span>
-                <span className="font-hud text-[13px] text-[#ffe16d] font-black drop-shadow-[0_0_10px_#ffdb3c]">
+                <span className="font-hud text-[12px] text-[#ffe16d] font-black drop-shadow-[0_0_10px_#ffdb3c]">
                   {impactFloater.pts}
                 </span>
               </div>
             )}
           </div>
-
-          {/* ================= RIGHT: MULTI-TIERED REAL INCOMING VIGHNAS ================= */}
-          <div className="relative flex items-center gap-1.5 shrink-0">
-            {/* Far Lane */}
-            {activeEnemies[2] && (
-              <div
-                className={`flex flex-col items-center opacity-70 scale-75 transition-all ${
-                  defeatedEnemyIds.has(activeEnemies[2].id)
-                    ? 'vighna-defeat-burst-anim'
-                    : hitEnemyIds.has(activeEnemies[2].id)
-                    ? 'obstacle-hit-anim'
-                    : ''
-                }`}
-              >
-                <span className="text-[7px] font-body text-[#e1bfb0] font-bold mb-0.5">FAR</span>
-                <div className="w-7 h-7 rounded-full bg-[#462856] border border-[#594136] flex items-center justify-center relative shadow-sm overflow-hidden">
-                  <img src={activeEnemies[2].img} alt={activeEnemies[2].name} className="w-full h-full object-cover" />
-                  <span className="absolute -top-1 -right-1 text-[7px] bg-[#1c012d] text-white font-hud font-bold px-1 rounded-full">
-                    {activeEnemies[2].hp}HP
-                  </span>
-                </div>
-                <span className="text-[7px] text-[#e1bfb0] truncate max-w-[36px]">{activeEnemies[2].name.split(' ')[0]}</span>
-              </div>
-            )}
-
-            {/* Med Lane */}
-            {activeEnemies[1] && (
-              <div
-                className={`flex flex-col items-center opacity-85 scale-90 transition-all ${
-                  defeatedEnemyIds.has(activeEnemies[1].id)
-                    ? 'vighna-defeat-burst-anim'
-                    : hitEnemyIds.has(activeEnemies[1].id)
-                    ? 'obstacle-hit-anim'
-                    : ''
-                }`}
-              >
-                <span className="text-[7px] font-body text-[#ffe16d] font-bold mb-0.5">MED</span>
-                <div className="w-9 h-9 rounded-lg bg-[#3a1d4a] border border-amber-500/40 flex items-center justify-center relative shadow-md overflow-hidden">
-                  <img src={activeEnemies[1].img} alt={activeEnemies[1].name} className="w-full h-full object-cover" />
-                  <span className="absolute -top-1 -right-1 text-[7px] bg-[#ff6f00] text-white font-hud font-bold px-1 rounded-full">
-                    {activeEnemies[1].hp}HP
-                  </span>
-                </div>
-                <span className="text-[7px] text-amber-200 truncate max-w-[42px]">{activeEnemies[1].name.split(' ')[0]}</span>
-              </div>
-            )}
-
-            {/* Critical Lane at Rangoli Boundary */}
-            <div className="relative flex flex-col items-center scale-110 ml-0.5 transition-all">
-              <div className="absolute -inset-2 bg-red-600/30 rounded-xl blur-sm pointer-events-none animate-pulse" />
-              <div
-                className={`w-12 h-12 rounded-xl bg-gradient-to-b from-red-600/40 via-[#3a1d4a] to-[#1c012d] p-0.5 shadow-[0_0_15px_rgba(255,0,60,0.8)] border-2 border-red-500 relative flex items-center justify-center overflow-hidden transition-all duration-300 ${
-                  criticalEnemy.hp <= 0 || defeatedEnemyIds.has(criticalEnemy.id)
-                    ? 'vighna-defeat-burst-anim'
-                    : hitEnemyIds.has(criticalEnemy.id)
-                    ? 'obstacle-hit-anim'
-                    : ''
-                }`}
-              >
-                <img
-                  src={criticalEnemy.img}
-                  alt={criticalEnemy.name}
-                  className="w-full h-full object-cover rounded-lg"
-                />
-                <span className="absolute -top-1 -right-1 text-[8px] bg-red-600 text-white font-hud font-black px-1.5 py-0.2 rounded-full shadow-md animate-bounce">
-                  {criticalEnemy.hp > 0 ? `${criticalEnemy.hp}HP` : 'PURGED!'}
-                </span>
-                <div className="absolute bottom-0 inset-x-0 bg-red-950/80 py-0.5 text-center">
-                  <span className="text-[7px] text-red-300 font-extrabold tracking-tight uppercase">
-                    TARGET
-                  </span>
-                </div>
-              </div>
-              <span className="text-[8px] font-body text-red-400 font-black mt-0.5">CRITICAL!</span>
-            </div>
-          </div>
         </div>
 
-        {/* WARNING FLASHING BANNER & SACRED RANGOLI/DIYA BOUNDARY */}
+        {/* ================= DYNAMIC ALERT BANNER & LEVEL 1 TEACHING HINT ================= */}
         <div className="relative z-20 flex flex-col gap-1">
-          <div className="flex items-center justify-between bg-red-950/80 border border-red-500/50 rounded-lg px-2.5 py-1 text-[9px] font-body shadow-inner">
-            <div className="flex items-center gap-1.5 text-red-300 font-bold">
-              <AppIcon name="warning" size={14} className="text-red-400 animate-ping" />
-              <span className="tracking-tight uppercase truncate">
-                {criticalEnemy.isShielded
-                  ? 'CRITICAL WARNING! SHIELDED VIGHNA AT BOUNDARY'
-                  : 'CRITICAL WARNING! VIGHNA IN STRIKE RANGE'}
+          {/* Level 1 Action-Based Guide */}
+          {level.id === 1 && (
+            <div className="flex items-center justify-between bg-amber-950/70 border border-amber-400/40 rounded-lg px-2.5 py-1 text-[9px] font-body text-amber-200 shadow-sm">
+              <div className="flex items-center gap-1.5 font-bold">
+                <AppIcon name="lightbulb" size={14} className="text-yellow-300 animate-pulse" />
+                <span>
+                  {pranaEnergy < 100
+                    ? 'Match 3 Modaks below to build Divine Prana!'
+                    : 'Prana Ready! Tap 🔱 TRIDENT above to banish the demon!'}
+                </span>
+              </div>
+              <span className="font-hud text-[8px] bg-amber-400 text-amber-950 font-black px-1.5 py-0.2 rounded uppercase">
+                {pranaEnergy < 100 ? 'STEP 1' : 'STRIKE!'}
               </span>
             </div>
-            <span className="text-[8px] bg-red-600 text-white font-hud font-black px-1.5 py-0.5 rounded uppercase shrink-0">
-              Breach Risk!
-            </span>
-          </div>
+          )}
 
+          {/* Breach Risk Warning if any demon is within 25% of Pandal */}
+          {activeEnemies.some((e) => e.progress > 70 && e.hp > 0) && (
+            <div className="flex items-center justify-between bg-red-950/85 border border-red-500/70 rounded-lg px-2.5 py-1 text-[9px] font-body shadow-lg animate-pulse">
+              <div className="flex items-center gap-1.5 text-red-200 font-bold">
+                <AppIcon name="warning" size={14} className="text-red-400 animate-ping" />
+                <span className="tracking-tight uppercase">
+                  CRITICAL! DEMON APPROACHING SACRED PANDAL BARRIER!
+                </span>
+              </div>
+              <span className="text-[8px] bg-red-600 text-white font-hud font-black px-1.5 py-0.5 rounded uppercase shrink-0 shadow">
+                BREACH RISK!
+              </span>
+            </div>
+          )}
+
+          {/* Pandal Rangoli Spark Barrier Status Bar */}
           <div className="relative h-4 flex items-center justify-between px-2 bg-gradient-to-r from-amber-950/60 via-[#3a1d4a] to-amber-950/60 rounded-full border border-[#ffdb3c]/30">
             <div className="flex items-center gap-1">
               <AppIcon name="local_fire_department" size={12} className="text-amber-400 diya-glow" />
               <span className="text-[8px] font-body uppercase font-extrabold text-[#ffdb3c] tracking-wider">
-                Sacred Pandal Rangoli Boundary
+                Sacred Pandal Protection Barrier
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_#ffdb3c]" />
-              <div className="w-1.5 h-1.5 rounded-full bg-yellow-200 shadow-[0_0_6px_#ffdb3c]" />
-              <div className="w-1.5 h-1.5 rounded-full bg-orange-400 shadow-[0_0_6px_#ffdb3c]" />
-              <span className="text-[8px] font-hud font-bold text-amber-300">SPARK BARRIER ACTIVE</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] font-hud font-bold text-amber-200">
+                INTEGRITY {protectionAura}%
+              </span>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse" />
             </div>
           </div>
         </div>

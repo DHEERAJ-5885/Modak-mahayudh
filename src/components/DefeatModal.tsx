@@ -33,13 +33,13 @@ export const DefeatModal: React.FC<DefeatModalProps> = ({
         </div>
 
         <span className="font-body text-[11px] text-[#ffb691] uppercase tracking-widest font-extrabold">
-          FESTIVAL AREA BREACHED
+          SACRED SANCTUM ALERT
         </span>
-        <h2 className="font-display text-[24px] font-black text-white leading-tight mt-0.5 mb-1">
-          LEVEL FAILED
+        <h2 className="font-display text-[26px] font-black text-white leading-tight mt-0.5 mb-1 text-red-400 drop-shadow-[0_0_12px_rgba(239,68,68,0.6)]">
+          PANDAL BREACHED
         </h2>
         <p className="font-body text-[12px] text-[#e1bfb0] mb-3">
-          The mischievous Vighnas breached the pandal boundary. Re-channel your divine Prana and try again!
+          The incoming Vighna demons breached the sacred Pandal barrier. Re-channel your divine Prana and protect the sanctum!
         </p>
 
         {/* Respectful Ganesha Inspiration Banner */}

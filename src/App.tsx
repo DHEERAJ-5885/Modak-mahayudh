@@ -279,7 +279,6 @@ export default function App() {
       submissionId: uniqueSubmissionId,
       playerId: player.id || 'player_temp',
       playerName: player.displayName || player.name || 'Temple Warrior',
-      campus: player.campus || 'Mumbai Central',
       level: battleLevelId,
       score: finalScore,
       obstaclesDefeated: obstaclesCount,

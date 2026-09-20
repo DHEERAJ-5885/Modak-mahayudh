@@ -38,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 w-full z-50 pt-safe bg-[#1c012d]/98 backdrop-blur-xl border-b border-[#ff6f00]/25 shadow-[0_6px_25px_rgba(0,0,0,0.8)]">
+    <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50 pt-safe bg-[#1c012d]/98 backdrop-blur-xl border-b border-[#ff6f00]/25 shadow-[0_6px_25px_rgba(0,0,0,0.8)]">
       {/* Offline sync banner if disconnected */}
       {!isOnline && (
         <div className="bg-[#521327] border-b border-[#ff6689]/40 text-[#ffd9de] py-1 px-3 text-center text-[10px] sm:text-[11px] font-bold flex items-center justify-center gap-1.5 animate-pulse">
@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      <div className="h-14 sm:h-16 px-2 sm:px-3 flex items-center justify-between gap-1 sm:gap-2 max-w-[440px] mx-auto w-full">
+      <div className="h-14 sm:h-16 px-2 sm:px-3 flex items-center justify-between gap-1 sm:gap-2 w-full">
         {/* Left: Back button (if not home) + Logo/Title */}
         <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-1">
           {currentScreen !== 'home' && (
@@ -76,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
               <h1 className="font-display text-[11px] sm:text-[13px] font-extrabold text-[#ffdb3c] leading-tight truncate drop-shadow">
                 {title || 'Modak Mahayudh'}
               </h1>
-              <span className="font-body text-[8px] sm:text-[9px] text-[#ffb691] font-semibold uppercase tracking-wider truncate">
+              <span className="hidden min-[360px]:inline-block font-body text-[8px] sm:text-[9px] text-[#ffb691] font-semibold uppercase tracking-wider truncate">
                 {subtitle || (currentScreen === 'home' ? 'Festival Defense' : currentScreen.toUpperCase())}
               </span>
             </div>

@@ -34,6 +34,8 @@ export const DEFAULT_PLAYER_STATS: Omit<PlayerProfile, 'id' | 'name' | 'displayN
   soundEnabled: true,
   reducedMotion: false,
   achievements: ['first_login'],
+  claimedRewards: [],
+  lastSpinTime: 0,
 };
 
 export const playerService = {
@@ -58,6 +60,12 @@ export const playerService = {
           achievements: Array.isArray(data.achievements) && data.achievements.length > 0
             ? data.achievements
             : ['first_login'],
+          claimedRewards: Array.isArray(data.claimedRewards)
+            ? data.claimedRewards
+            : [],
+          lastSpinTime: typeof data.lastSpinTime === 'number'
+            ? data.lastSpinTime
+            : (typeof data.lastSpinTimestamp === 'number' ? data.lastSpinTimestamp : 0),
         } as PlayerProfile;
       }
       return null;
@@ -101,6 +109,12 @@ export const playerService = {
       achievements: migratedData?.achievements?.length
         ? migratedData.achievements
         : ['first_login'],
+      claimedRewards: Array.isArray(migratedData?.claimedRewards)
+        ? migratedData.claimedRewards
+        : [],
+      lastSpinTime: typeof migratedData?.lastSpinTime === 'number'
+        ? migratedData.lastSpinTime
+        : 0,
       createdAt: nowIso,
       updatedAt: nowIso,
     };

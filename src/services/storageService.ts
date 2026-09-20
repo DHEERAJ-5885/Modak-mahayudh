@@ -17,6 +17,8 @@ export const storageService = {
           ...INITIAL_PLAYER,
           ...parsed,
           unlockedPowers: parsed.unlockedPowers || INITIAL_PLAYER.unlockedPowers,
+          claimedRewards: Array.isArray(parsed.claimedRewards) ? parsed.claimedRewards : (INITIAL_PLAYER.claimedRewards || []),
+          lastSpinTime: typeof parsed.lastSpinTime === 'number' ? parsed.lastSpinTime : 0,
         };
       }
     } catch {

@@ -988,7 +988,7 @@ export const BattlefieldScreen: React.FC<BattlefieldScreenProps> = ({
 
   return (
     <div
-      className={`flex-1 flex flex-col w-full max-w-[440px] mx-auto select-none overflow-x-hidden pb-4 ${
+      className={`flex-1 flex flex-col w-full max-w-[480px] mx-auto select-none overflow-x-hidden pb-[calc(2rem+max(env(safe-area-inset-bottom,0px),12px))] touch-pan-y ${
         screenShaking ? 'screen-shake-anim' : ''
       }`}
     >

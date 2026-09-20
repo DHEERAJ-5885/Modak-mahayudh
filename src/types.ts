@@ -111,6 +111,8 @@ export interface PlayerProfile {
   soundEnabled: boolean;
   reducedMotion: boolean;
   achievements?: string[];
+  claimedRewards?: string[];
+  lastSpinTime?: number;
   createdAt?: string;
   updatedAt?: string;
 }

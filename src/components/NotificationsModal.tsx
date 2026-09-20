@@ -12,7 +12,7 @@ interface NotificationsModalProps {
   notifications: GameNotification[];
   onRefreshNotifications: () => void;
   onUpdatePlayer?: (player: PlayerProfile) => void;
-  onShowToast: (message: string, icon?: string) => void;
+  onShowToast?: (message: string, icon?: string) => void;
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
@@ -53,13 +53,13 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
       );
 
       playSound('victory', player.soundEnabled);
-      onShowToast(`Life sent to ${targetName}!`, 'favorite');
+      onShowToast?.(`Life sent to ${targetName}!`, 'favorite');
 
       // Dismiss/fulfill notification
       await socialService.dismissNotification(currentUserId, notif.id);
       onRefreshNotifications();
     } catch (e: any) {
-      onShowToast(e.message || 'Could not send life.', 'info');
+      onShowToast?.(e.message || 'Could not send life.', 'info');
     } finally {
       setActingNotifId(null);
     }
@@ -69,7 +69,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   const handleIgnoreLifeRequest = async (notif: GameNotification) => {
     playSound('click', player.soundEnabled);
     await socialService.dismissNotification(currentUserId, notif.id);
-    onShowToast('Request dismissed.', 'close');
+    onShowToast?.('Request dismissed.', 'close');
     onRefreshNotifications();
   };
 
@@ -82,11 +82,11 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
       if (onUpdatePlayer) {
         onUpdatePlayer({ ...player, lives: newLives });
       }
-      onShowToast('Sacred Life claimed! (+1 ❤️)', 'favorite');
+      onShowToast?.('Sacred Life claimed! (+1 ❤️)', 'favorite');
       await socialService.dismissNotification(currentUserId, notif.id);
       onRefreshNotifications();
     } catch (e: any) {
-      onShowToast(e.message || 'Could not claim life.', 'info');
+      onShowToast?.(e.message || 'Could not claim life.', 'info');
     } finally {
       setActingNotifId(null);
     }

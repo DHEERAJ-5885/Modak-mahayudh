@@ -7,20 +7,31 @@ interface NavbarProps {
   currentScreen: Screen;
   onNavigate: (screen: Screen) => void;
   soundEnabled: boolean;
+  isFreeSpinAvailable?: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentScreen, onNavigate, soundEnabled }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  currentScreen,
+  onNavigate,
+  soundEnabled,
+  isFreeSpinAvailable = true,
+}) => {
   const navItems: { screen: Screen; label: string; icon: string; badge?: string }[] = [
     { screen: 'home', label: 'Home', icon: 'cottage' },
     { screen: 'map', label: 'Levels', icon: 'map' },
     { screen: 'powers', label: 'Powers', icon: 'auto_awesome' },
     { screen: 'ranks', label: 'Ranks', icon: 'emoji_events' },
-    { screen: 'rewards', label: 'Rewards', icon: 'featured_seasonal_and_gifts', badge: '1 Free' },
+    {
+      screen: 'rewards',
+      label: 'Rewards',
+      icon: 'featured_seasonal_and_gifts',
+      badge: isFreeSpinAvailable ? '1 Free' : undefined,
+    },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 w-full z-50 pb-safe bg-[#1c012d]/98 backdrop-blur-xl border-t border-[#ff6f00]/30 shadow-[0_-8px_30px_rgba(0,0,0,0.85)]">
-      <div className="h-16 px-1.5 sm:px-3 max-w-[440px] mx-auto flex items-center justify-between gap-0.5">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50 pb-safe bg-[#1c012d]/98 backdrop-blur-xl border-t border-[#ff6f00]/30 shadow-[0_-8px_30px_rgba(0,0,0,0.85)]">
+      <div className="h-16 px-1 sm:px-2 w-full flex items-center justify-between gap-0.5">
         {navItems.map((item) => {
           const isActive = currentScreen === item.screen;
           return (

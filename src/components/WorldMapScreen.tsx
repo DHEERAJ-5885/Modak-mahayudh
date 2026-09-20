@@ -138,7 +138,7 @@ export const WorldMapScreen: React.FC<WorldMapScreenProps> = ({
     levels[0];
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-[440px] mx-auto pb-48 relative select-none overflow-x-hidden">
+    <div className="flex-1 flex flex-col w-full max-w-[480px] mx-auto pb-[calc(14rem+max(env(safe-area-inset-bottom,0px),12px))] relative overflow-x-hidden touch-pan-y">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#1c012d]/95 border border-[#ffdb3c]/50 text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 animate-bounce">
@@ -148,7 +148,7 @@ export const WorldMapScreen: React.FC<WorldMapScreenProps> = ({
       )}
 
       {/* TOP ZONE RIBBON BANNER */}
-      <div className="sticky top-16 z-30 bg-gradient-to-r from-[#2b0e3b] via-[#4a2d5b] to-[#2b0e3b] border-b border-[#ff6f00]/30 px-3 py-1.5 flex items-center justify-between shadow-lg">
+      <div className="sticky top-0 z-30 bg-gradient-to-r from-[#2b0e3b] via-[#4a2d5b] to-[#2b0e3b] border-b border-[#ff6f00]/30 px-3 py-1.5 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-[#ff6f00] flex items-center justify-center shadow">
             <AppIcon name="wb_twilight" size={16} className="text-white" />
@@ -525,7 +525,7 @@ export const WorldMapScreen: React.FC<WorldMapScreenProps> = ({
       </div>
 
       {/* DOCKED BOTTOM PLAY ACTION SHEET */}
-      <aside className="fixed bottom-16 left-0 right-0 z-40 px-3 max-w-[440px] mx-auto pointer-events-none">
+      <aside className="fixed bottom-[calc(4.25rem+max(env(safe-area-inset-bottom,0px),12px))] left-1/2 -translate-x-1/2 w-full max-w-[480px] z-40 px-2.5 sm:px-3 pointer-events-none">
         <div className="pointer-events-auto bg-gradient-to-b from-[#3a1d4a]/95 via-[#2b0e3b]/98 to-[#1c012d]/98 border-2 border-[#ffdb3c]/40 backdrop-blur-xl rounded-3xl p-3 shadow-[0_-10px_35px_rgba(0,0,0,0.85)]">
           {/* Top card info */}
           <div className="flex items-center justify-between pb-2 border-b border-white/10">
@@ -663,8 +663,8 @@ export const WorldMapScreen: React.FC<WorldMapScreenProps> = ({
 
       {/* LEVEL DETAIL MODAL POPUP */}
       {selectedModalLevel && (
-        <div className="fixed inset-0 z-50 bg-[#1c012d]/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-gradient-to-b from-[#3a1d4a] to-[#220532] border-2 border-[#ffdb3c]/50 w-full max-w-sm rounded-3xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.9)] relative flex flex-col items-center text-center">
+        <div className="fixed inset-0 z-50 bg-[#1c012d]/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 select-none">
+          <div className="bg-gradient-to-b from-[#3a1d4a] to-[#220532] border-2 border-[#ffdb3c]/50 w-full max-w-sm rounded-3xl p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.9)] relative flex flex-col items-center text-center max-h-[min(90dvh,640px)] overflow-y-auto my-auto">
             <button
               onClick={() => setSelectedModalLevel(null)}
               className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-[#2b0e3b] border border-white/20 flex items-center justify-center text-gray-300 hover:text-white cursor-pointer"

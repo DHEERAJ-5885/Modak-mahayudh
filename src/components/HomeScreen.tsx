@@ -46,7 +46,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-[440px] mx-auto pb-24 relative select-none overflow-x-hidden">
+    <div className="flex-1 flex flex-col w-full max-w-[480px] mx-auto pb-[calc(5rem+max(env(safe-area-inset-bottom,0px),12px))] relative overflow-x-hidden touch-pan-y">
       {/* Sparkle burst container */}
       {particles.map((p) => (
         <div
@@ -170,12 +170,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               playSound('click', player.soundEnabled);
               onNavigate('map');
             }}
-            className="flex flex-col items-center justify-center gap-1 p-2 sm:p-2.5 rounded-xl bg-[#2f123f] hover:bg-[#3a1d4a] transition-all shadow-md text-center active:scale-95 border border-[#ff6f00]/20 cursor-pointer min-w-0"
+            className="flex flex-col items-center justify-center gap-1 p-1.5 sm:p-2.5 rounded-xl bg-[#2f123f] hover:bg-[#3a1d4a] transition-all shadow-md text-center active:scale-95 border border-[#ff6f00]/20 cursor-pointer min-w-0"
           >
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#462856] flex items-center justify-center text-[#ffb691] shadow-inner shrink-0">
               <AppIcon name="map" size={18} className="text-[#ffb691]" />
             </div>
-            <span className="font-body text-[10px] sm:text-[11px] text-white font-bold truncate w-full">World Map</span>
+            <span className="font-body text-[9px] min-[360px]:text-[10px] sm:text-[11px] text-white font-bold truncate w-full">World Map</span>
           </button>
 
           <button
@@ -183,12 +183,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               playSound('click', player.soundEnabled);
               onNavigate('powers');
             }}
-            className="flex flex-col items-center justify-center gap-1 p-2 sm:p-2.5 rounded-xl bg-[#2f123f] hover:bg-[#3a1d4a] transition-all shadow-md text-center active:scale-95 border border-[#ff6f00]/20 cursor-pointer min-w-0"
+            className="flex flex-col items-center justify-center gap-1 p-1.5 sm:p-2.5 rounded-xl bg-[#2f123f] hover:bg-[#3a1d4a] transition-all shadow-md text-center active:scale-95 border border-[#ff6f00]/20 cursor-pointer min-w-0"
           >
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#462856] flex items-center justify-center text-[#ffdb3c] shadow-inner shrink-0">
               <AppIcon name="auto_awesome" size={18} className="text-[#ffdb3c]" fill="#ffdb3c" />
             </div>
-            <span className="font-body text-[10px] sm:text-[11px] text-white font-bold truncate w-full">Upgrades</span>
+            <span className="font-body text-[9px] min-[360px]:text-[10px] sm:text-[11px] text-white font-bold truncate w-full">Upgrades</span>
           </button>
 
           <button
@@ -196,12 +196,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               playSound('click', player.soundEnabled);
               onNavigate('ranks');
             }}
-            className="flex flex-col items-center justify-center gap-1 p-2 sm:p-2.5 rounded-xl bg-[#2f123f] hover:bg-[#3a1d4a] transition-all shadow-md text-center active:scale-95 border border-[#ff6f00]/20 cursor-pointer min-w-0"
+            className="flex flex-col items-center justify-center gap-1 p-1.5 sm:p-2.5 rounded-xl bg-[#2f123f] hover:bg-[#3a1d4a] transition-all shadow-md text-center active:scale-95 border border-[#ff6f00]/20 cursor-pointer min-w-0"
           >
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#462856] flex items-center justify-center text-[#ff6689] shadow-inner shrink-0">
               <AppIcon name="emoji_events" size={18} className="text-[#ff6689]" />
             </div>
-            <span className="font-body text-[10px] sm:text-[11px] text-white font-bold truncate w-full">Ranks</span>
+            <span className="font-body text-[9px] min-[360px]:text-[10px] sm:text-[11px] text-white font-bold truncate w-full">Ranks</span>
           </button>
 
           <button
@@ -209,7 +209,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               playSound('click', player.soundEnabled);
               onNavigate('rewards');
             }}
-            className="relative flex flex-col items-center justify-center gap-1 p-2 sm:p-2.5 rounded-xl bg-[#2f123f] hover:bg-[#3a1d4a] transition-all shadow-md text-center active:scale-95 border border-[#ff6f00]/20 cursor-pointer min-w-0"
+            className="relative flex flex-col items-center justify-center gap-1 p-1.5 sm:p-2.5 rounded-xl bg-[#2f123f] hover:bg-[#3a1d4a] transition-all shadow-md text-center active:scale-95 border border-[#ff6f00]/20 cursor-pointer min-w-0"
           >
             <span className="absolute -top-1 -right-0.5 bg-[#ff6689] text-white font-body text-[8px] font-bold px-1 py-0.2 rounded-full shadow animate-pulse pointer-events-none">
               1 Free
@@ -217,7 +217,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#462856] flex items-center justify-center text-[#ffe16d] shadow-inner shrink-0">
               <AppIcon name="featured_seasonal_and_gifts" size={18} className="text-[#ffe16d]" />
             </div>
-            <span className="font-body text-[10px] sm:text-[11px] text-white font-bold truncate w-full">Daily Gift</span>
+            <span className="font-body text-[9px] min-[360px]:text-[10px] sm:text-[11px] text-white font-bold truncate w-full">Daily Gift</span>
           </button>
         </div>
 

@@ -303,4 +303,6 @@ export const INITIAL_PLAYER: import('../types').PlayerProfile = {
   soundEnabled: true,
   reducedMotion: false,
   achievements: ['first_win', 'combo_master', 'power_unlocked'],
+  claimedRewards: [],
+  lastSpinTime: 0,
 };

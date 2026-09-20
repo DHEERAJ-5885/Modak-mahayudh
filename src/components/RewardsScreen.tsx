@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { PlayerProfile } from '../types';
 import { playSound } from '../utils/sound';
@@ -7,13 +7,104 @@ import { AppIcon } from './AppIcon';
 interface RewardsScreenProps {
   player: PlayerProfile;
   onAddCoins: (amount: number) => void;
+  onClaimReward?: (tierId: string, coins: number, hearts?: number) => void;
+  onSpinComplete?: (prizeValue: number, spinTimestamp: number) => void;
 }
 
-export const RewardsScreen: React.FC<RewardsScreenProps> = ({ player, onAddCoins }) => {
+interface RewardTier {
+  id: string;
+  name: string;
+  desc: string;
+  requiredLevel: number;
+  coins: number;
+  hearts?: number;
+  icon: string;
+}
+
+const REWARD_TIERS: RewardTier[] = [
+  {
+    id: 'tier_1',
+    name: 'Tier 1: Starter Prasadam',
+    desc: '+100 Coins & +1 Heart',
+    requiredLevel: 1,
+    coins: 100,
+    hearts: 1,
+    icon: 'card_giftcard',
+  },
+  {
+    id: 'tier_3',
+    name: 'Tier 3: Trishul Charge',
+    desc: '+250 Coins & Trident Booster',
+    requiredLevel: 3,
+    coins: 250,
+    hearts: 0,
+    icon: 'stat_3',
+  },
+  {
+    id: 'tier_5',
+    name: 'Tier 5: Lotus Core Chest',
+    desc: '+500 Coins & Lotus Blessing',
+    requiredLevel: 5,
+    coins: 500,
+    hearts: 1,
+    icon: 'spa',
+  },
+  {
+    id: 'tier_7',
+    name: 'Tier 7: Diya Radiance',
+    desc: '+750 Coins & Aura Shield',
+    requiredLevel: 7,
+    coins: 750,
+    hearts: 1,
+    icon: 'wb_sunny',
+  },
+  {
+    id: 'tier_10',
+    name: 'Tier 10: Maha Gopuram Crown',
+    desc: '+1500 Coins & +3 Sacred Hearts',
+    requiredLevel: 10,
+    coins: 1500,
+    hearts: 3,
+    icon: 'temple_hindu',
+  },
+];
+
+const COOLDOWN_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+export const RewardsScreen: React.FC<RewardsScreenProps> = ({
+  player,
+  onAddCoins,
+  onClaimReward,
+  onSpinComplete,
+}) => {
   const [spinning, setSpinning] = useState(false);
   const [spinDeg, setSpinDeg] = useState(0);
   const [wonPrize, setWonPrize] = useState<string | null>(null);
-  const [hasSpunToday, setHasSpunToday] = useState(false);
+  const [currentTime, setCurrentTime] = useState<number>(Date.now());
+
+  // 1-second live countdown timer for 24-hour spin cooldown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const lastSpin = player.lastSpinTime || 0;
+  const timeElapsed = currentTime - lastSpin;
+  const isCooldownActive = lastSpin > 0 && timeElapsed < COOLDOWN_DURATION_MS;
+  const msRemaining = Math.max(0, COOLDOWN_DURATION_MS - timeElapsed);
+
+  const formatCooldown = (ms: number): string => {
+    const totalSecs = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSecs / 3600);
+    const minutes = Math.floor((totalSecs % 3600) / 60);
+    const seconds = totalSecs % 60;
+    if (hours > 0) {
+      return `${hours}h ${minutes.toString().padStart(2, '0')}m`;
+    }
+    return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+  };
 
   const wheelSegments = [
     { label: '+100 Coins', value: 100, color: '#ff9800' },
@@ -27,22 +118,30 @@ export const RewardsScreen: React.FC<RewardsScreenProps> = ({ player, onAddCoins
   ];
 
   const handleSpin = () => {
-    if (spinning || hasSpunToday) return;
+    if (spinning || isCooldownActive) return;
     setSpinning(true);
+    setWonPrize(null);
     playSound('power', player.soundEnabled);
 
-    // Pick random segment (e.g. index 2: +250 Coins)
     const winningIndex = Math.floor(Math.random() * wheelSegments.length);
     const extraRounds = 5 + Math.floor(Math.random() * 3);
     const degrees = extraRounds * 360 + (winningIndex * (360 / wheelSegments.length));
     setSpinDeg(degrees);
 
+    const spinTimestamp = Date.now();
+
     setTimeout(() => {
       setSpinning(false);
-      setHasSpunToday(true);
       const prize = wheelSegments[winningIndex];
       setWonPrize(prize.label);
-      onAddCoins(prize.value);
+
+      // Persist the 24-hour cooldown timestamp and add prize
+      if (onSpinComplete) {
+        onSpinComplete(prize.value, spinTimestamp);
+      } else {
+        onAddCoins(prize.value);
+      }
+
       playSound('victory', player.soundEnabled);
 
       try {
@@ -57,8 +156,43 @@ export const RewardsScreen: React.FC<RewardsScreenProps> = ({ player, onAddCoins
     }, 3200);
   };
 
+  const handleClaimTier = (tier: RewardTier) => {
+    const claimedList = player.claimedRewards || [];
+    // Strict duplicate check
+    if (claimedList.includes(tier.id)) {
+      return;
+    }
+
+    // Verify qualification
+    const playerLevel = player.highestLevel || 1;
+    if (playerLevel < tier.requiredLevel) {
+      return;
+    }
+
+    playSound('victory', player.soundEnabled);
+
+    if (onClaimReward) {
+      onClaimReward(tier.id, tier.coins, tier.hearts || 0);
+    } else {
+      onAddCoins(tier.coins);
+    }
+
+    try {
+      confetti({
+        particleCount: 35,
+        spread: 50,
+        origin: { y: 0.7 },
+      });
+    } catch {
+      // Safe fallback
+    }
+  };
+
+  const claimedList = player.claimedRewards || [];
+  const playerHighestLevel = player.highestLevel || 1;
+
   return (
-    <div className="flex-1 flex flex-col w-full max-w-[440px] mx-auto pb-24 px-3.5 pt-3 select-none">
+    <div className="flex-1 flex flex-col w-full max-w-[480px] mx-auto pb-[calc(6rem+max(env(safe-area-inset-bottom,0px),12px))] px-3.5 pt-3 touch-pan-y">
       {/* Title */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex flex-col">
@@ -125,23 +259,39 @@ export const RewardsScreen: React.FC<RewardsScreenProps> = ({ player, onAddCoins
           </div>
         </div>
 
-        {/* Spin Result or CTA Button */}
-        {wonPrize ? (
-          <div className="mt-2 bg-[#ffdb3c] text-[#341100] px-4 py-2 rounded-full font-display font-black text-[13px] animate-bounce shadow">
+        {/* Spin Result Feedback */}
+        {wonPrize && (
+          <div className="my-2 bg-[#ffdb3c] text-[#341100] px-4 py-1.5 rounded-full font-display font-black text-[13px] animate-bounce shadow">
             🎉 BLESSED WITH: {wonPrize}!
+          </div>
+        )}
+
+        {/* Free Spin CTA / Cooldown Indicator */}
+        {isCooldownActive ? (
+          <div className="flex flex-col items-center gap-1 mt-2 w-full max-w-[260px]">
+            <button
+              disabled
+              className="w-full py-2.5 px-4 rounded-full font-display text-[13px] font-extrabold shadow bg-stone-900/90 border border-[#ffe16d]/30 text-stone-300 cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <AppIcon name="schedule" size={18} className="text-[#ffe16d] animate-spin" />
+              <span>COOLDOWN: {formatCooldown(msRemaining)}</span>
+            </button>
+            <span className="text-[10px] text-[#ffb691] font-hud font-bold tracking-wider">
+              24-Hour Aarti Cooldown Active
+            </span>
           </div>
         ) : (
           <button
             onClick={handleSpin}
-            disabled={spinning || hasSpunToday}
-            className={`mt-2 w-full max-w-[220px] py-3 rounded-full font-display text-[14px] font-black shadow-lg transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${
-              hasSpunToday
-                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-[#ffe16d] via-[#ff9800] to-[#ff6f00] text-[#341100] hover:brightness-110'
+            disabled={spinning}
+            className={`mt-2 w-full max-w-[240px] py-3 rounded-full font-display text-[14px] font-black shadow-[0_4px_20px_rgba(255,219,60,0.4)] transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${
+              spinning
+                ? 'bg-amber-600 text-stone-900 cursor-wait'
+                : 'bg-gradient-to-r from-[#ffe16d] via-[#ff9800] to-[#ff6f00] text-[#341100] hover:brightness-110 animate-pulse'
             }`}
           >
-            <AppIcon name="sync" size={20} />
-            <span>{spinning ? 'SPINNING...' : hasSpunToday ? 'SPUN FOR TODAY' : 'FREE SPIN!'}</span>
+            <AppIcon name="celebration" size={20} />
+            <span>{spinning ? 'SPINNING DIYA...' : 'FREE SPIN AVAILABLE!'}</span>
           </button>
         )}
       </div>
@@ -153,55 +303,82 @@ export const RewardsScreen: React.FC<RewardsScreenProps> = ({ player, onAddCoins
             <AppIcon name="featured_seasonal_and_gifts" size={20} className="text-[#ffdb3c]" />
             <h3 className="font-display text-[15px] font-extrabold text-white">Chaturthi Utsav Pass</h3>
           </div>
-          <span className="font-hud text-[11px] text-[#ffe16d] bg-[#3a1d4a] px-2 py-0.5 rounded-full border border-[#ffe16d]/30">
-            Tier 3 / 10
+          <span className="font-hud text-[11px] text-[#ffe16d] bg-[#3a1d4a] px-2.5 py-0.5 rounded-full border border-[#ffe16d]/30 font-bold">
+            Level {playerHighestLevel} / 10
           </span>
         </div>
 
-        <div className="flex flex-col gap-2 mt-1">
-          {/* Milestone 1 */}
-          <div className="bg-[#1c012d] p-2.5 rounded-xl flex items-center justify-between border border-emerald-500/30">
-            <div className="flex items-center gap-2.5">
-              <AppIcon name="check_circle" size={22} className="text-emerald-400" />
-              <div className="flex flex-col">
-                <span className="font-display text-[12px] text-white font-bold">Tier 1: Starter Prasadam</span>
-                <span className="font-body text-[10px] text-gray-400">+100 Coins & +1 Heart</span>
-              </div>
-            </div>
-            <span className="text-[10px] text-emerald-400 font-bold uppercase">Claimed</span>
-          </div>
+        <p className="font-body text-[11px] text-[#e1bfb0]">
+          Advance through sacred festival levels to claim one-time consecrated milestones.
+        </p>
 
-          {/* Milestone 2 */}
-          <div className="bg-[#3a1d4a] p-2.5 rounded-xl flex items-center justify-between border border-[#ffdb3c]">
-            <div className="flex items-center gap-2.5">
-              <AppIcon name="card_giftcard" size={22} className="text-[#ffdb3c]" />
-              <div className="flex flex-col">
-                <span className="font-display text-[12px] text-white font-bold">Tier 3: Trishul Charge</span>
-                <span className="font-body text-[10px] text-[#ffe16d]">+250 Coins & Trident Booster</span>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                playSound('victory', player.soundEnabled);
-                onAddCoins(250);
-              }}
-              className="bg-[#ffdb3c] text-[#341100] px-3 py-1 rounded-full font-display text-[11px] font-extrabold shadow active:scale-95 cursor-pointer"
-            >
-              CLAIM
-            </button>
-          </div>
+        <div className="flex flex-col gap-2.5 mt-1">
+          {REWARD_TIERS.map((tier) => {
+            const isClaimed = claimedList.includes(tier.id);
+            const isUnlocked = playerHighestLevel >= tier.requiredLevel;
 
-          {/* Milestone 3 */}
-          <div className="bg-[#1c012d] p-2.5 rounded-xl flex items-center justify-between border border-white/10 opacity-70">
-            <div className="flex items-center gap-2.5">
-              <AppIcon name="lock" size={22} className="text-gray-400" />
-              <div className="flex flex-col">
-                <span className="font-display text-[12px] text-gray-300 font-bold">Tier 5: Lotus Core Chest</span>
-                <span className="font-body text-[10px] text-gray-400">Unlock at Level 5</span>
+            return (
+              <div
+                key={tier.id}
+                className={`p-3 rounded-xl flex items-center justify-between border transition-all ${
+                  isClaimed
+                    ? 'bg-[#1c012d]/80 border-emerald-500/30'
+                    : isUnlocked
+                    ? 'bg-gradient-to-r from-[#3a1d4a] to-[#46235b] border-[#ffdb3c] shadow-md'
+                    : 'bg-[#1c012d]/50 border-white/10 opacity-70'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-inner ${
+                      isClaimed
+                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                        : isUnlocked
+                        ? 'bg-gradient-to-br from-[#ff6f00] to-[#ffdb3c] text-white'
+                        : 'bg-stone-800 text-stone-500 border border-white/5'
+                    }`}
+                  >
+                    <AppIcon name={isClaimed ? 'check_circle' : tier.icon} size={20} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span
+                      className={`font-display text-[12px] font-bold ${
+                        isClaimed ? 'text-gray-300' : isUnlocked ? 'text-white' : 'text-gray-400'
+                      }`}
+                    >
+                      {tier.name}
+                    </span>
+                    <span
+                      className={`font-body text-[10px] ${
+                        isClaimed ? 'text-gray-500' : isUnlocked ? 'text-[#ffe16d]' : 'text-gray-500'
+                      }`}
+                    >
+                      {tier.desc}
+                    </span>
+                  </div>
+                </div>
+
+                {isClaimed ? (
+                  <div className="flex items-center gap-1 text-emerald-400 font-hud text-[11px] font-extrabold uppercase px-2.5 py-1 bg-emerald-950/60 rounded-full border border-emerald-500/30">
+                    <AppIcon name="check_circle" size={14} className="text-emerald-400" />
+                    <span>CLAIMED</span>
+                  </div>
+                ) : isUnlocked ? (
+                  <button
+                    onClick={() => handleClaimTier(tier)}
+                    className="bg-gradient-to-r from-[#ffe16d] via-[#ffdb3c] to-[#ff9800] text-[#341100] px-3.5 py-1.5 rounded-full font-display text-[11px] font-black shadow-lg hover:brightness-110 active:scale-95 cursor-pointer flex items-center gap-1"
+                  >
+                    <AppIcon name="card_giftcard" size={14} />
+                    <span>CLAIM</span>
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-gray-400 font-hud font-bold bg-black/40 px-2 py-0.5 rounded-full border border-white/10">
+                    LVL {tier.requiredLevel}
+                  </span>
+                )}
               </div>
-            </div>
-            <span className="text-[10px] text-gray-400 font-bold">LOCKED</span>
-          </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -11,7 +11,7 @@ interface SocialModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTab?: SocialTab;
-  onShowToast: (message: string, icon?: string) => void;
+  onShowToast?: (message: string, icon?: string) => void;
 }
 
 export const SocialModal: React.FC<SocialModalProps> = ({
@@ -78,9 +78,9 @@ export const SocialModal: React.FC<SocialModalProps> = ({
     if (res.success) {
       setSentLifeFriendIds((prev) => [...prev, friend.friendId]);
       playSound('victory', player.soundEnabled);
-      onShowToast(`Life sent to ${friend.friendName}!`, 'favorite');
+      onShowToast?.(`Life sent to ${friend.friendName}!`, 'favorite');
     } else {
-      onShowToast(res.message, 'info');
+      onShowToast?.(res.message, 'info');
     }
   };
 
@@ -99,9 +99,9 @@ export const SocialModal: React.FC<SocialModalProps> = ({
 
     if (accept) {
       playSound('victory', player.soundEnabled);
-      onShowToast(`Accepted ${request.senderName}'s friend request!`, 'check_circle');
+      onShowToast?.(`Accepted ${request.senderName}'s friend request!`, 'check_circle');
     } else {
-      onShowToast(`Declined friend request.`, 'close');
+      onShowToast?.(`Declined friend request.`, 'close');
     }
   };
 
@@ -117,9 +117,9 @@ export const SocialModal: React.FC<SocialModalProps> = ({
     if (res.success) {
       setInvitedPlayerIds((prev) => [...prev, targetId]);
       playSound('victory', player.soundEnabled);
-      onShowToast('Invitation sent!', 'mail');
+      onShowToast?.('Invitation sent!', 'mail');
     } else {
-      onShowToast(res.message, 'info');
+      onShowToast?.(res.message, 'info');
     }
   };
 
@@ -136,9 +136,9 @@ export const SocialModal: React.FC<SocialModalProps> = ({
     if (res.success) {
       setRequestedFriendIds((prev) => [...prev, friend.friendId]);
       playSound('victory', player.soundEnabled);
-      onShowToast(`Life request sent to ${friend.friendName}!`, 'volunteer_activism');
+      onShowToast?.(`Life request sent to ${friend.friendName}!`, 'volunteer_activism');
     } else {
-      onShowToast(res.message, 'info');
+      onShowToast?.(res.message, 'info');
     }
   };
 

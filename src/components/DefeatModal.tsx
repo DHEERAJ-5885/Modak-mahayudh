@@ -25,8 +25,8 @@ export const DefeatModal: React.FC<DefeatModalProps> = ({
   }, [soundEnabled]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#1c012d]/90 backdrop-blur-md flex items-center justify-center p-4 select-none">
-      <div className="bg-gradient-to-b from-[#3a1d4a] via-[#2f123f] to-[#1c012d] border-2 border-red-500/60 w-full max-w-sm rounded-3xl p-5 shadow-[0_24px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(239,68,68,0.4)] relative flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+    <div className="fixed inset-0 z-50 bg-[#1c012d]/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 select-none">
+      <div className="bg-gradient-to-b from-[#3a1d4a] via-[#2f123f] to-[#1c012d] border-2 border-red-500/60 w-full max-w-sm rounded-3xl p-4 sm:p-5 shadow-[0_24px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(239,68,68,0.4)] relative flex flex-col items-center text-center max-h-[min(92dvh,640px)] overflow-y-auto my-auto animate-in fade-in zoom-in duration-300">
         {/* Glow Header */}
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 via-red-600 to-rose-900 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(220,38,38,0.6)] -mt-12 mb-1.5 border-2 border-white">
           <AppIcon name="crisis_alert" size={34} className="text-white" />

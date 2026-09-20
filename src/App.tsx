@@ -16,6 +16,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { ProfileModal } from './components/ProfileModal';
 import { SocialModal } from './components/SocialModal';
 import { NotificationsModal } from './components/NotificationsModal';
+import { Toast } from './components/Toast';
 import { playSound } from './utils/sound';
 import { storageService } from './services/storageService';
 import { leaderboardService } from './services/leaderboardService';
@@ -48,6 +49,11 @@ export default function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; icon?: string } | null>(null);
+
+  const showToast = useCallback((message: string, icon: string = 'check_circle') => {
+    setToast({ message, icon });
+  }, []);
 
   // Victory Dialog state
   const [victoryData, setVictoryData] = useState<{
@@ -374,10 +380,61 @@ export default function App() {
   const handleAddCoins = (amount: number) => {
     setPlayer((prev) => {
       const newCoins = prev.coins + amount;
+      const updated = { ...prev, coins: newCoins };
+      storageService.savePlayer(updated);
       if (prev.id) {
         playerService.savePlayerProfile(prev.id, { coins: newCoins });
       }
-      return { ...prev, coins: newCoins };
+      return updated;
+    });
+  };
+
+  // Claim one-time reward tier and persist to storage and Firestore
+  const handleClaimReward = (tierId: string, coins: number, hearts: number = 0) => {
+    setPlayer((prev) => {
+      const currentClaimed = prev.claimedRewards || [];
+      if (currentClaimed.includes(tierId)) {
+        return prev;
+      }
+      const updatedClaimed = [...currentClaimed, tierId];
+      const newCoins = prev.coins + coins;
+      const newLives = Math.min(prev.maxLives, prev.lives + hearts);
+      const updated: PlayerProfile = {
+        ...prev,
+        coins: newCoins,
+        lives: newLives,
+        claimedRewards: updatedClaimed,
+      };
+      storageService.savePlayer(updated);
+      if (prev.id) {
+        playerService.savePlayerProfile(prev.id, {
+          coins: newCoins,
+          lives: newLives,
+          claimedRewards: updatedClaimed,
+        });
+      }
+      return updated;
+    });
+    showToast(`Prasadam Claimed! +${coins} Coins`, 'card_giftcard');
+  };
+
+  // Handle free spin completion and persist 24h cooldown timestamp
+  const handleSpinComplete = (prizeCoins: number, spinTimestamp: number) => {
+    setPlayer((prev) => {
+      const newCoins = prev.coins + prizeCoins;
+      const updated: PlayerProfile = {
+        ...prev,
+        coins: newCoins,
+        lastSpinTime: spinTimestamp,
+      };
+      storageService.savePlayer(updated);
+      if (prev.id) {
+        playerService.savePlayerProfile(prev.id, {
+          coins: newCoins,
+          lastSpinTime: spinTimestamp,
+        });
+      }
+      return updated;
     });
   };
 
@@ -411,14 +468,16 @@ export default function App() {
 
   const currentLevelConfig = levels.find((l) => l.id === battleLevelId) || levels[2];
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const isFreeSpinAvailable =
+    !player.lastSpinTime || Date.now() - player.lastSpinTime >= 24 * 60 * 60 * 1000;
 
   return (
-    <div className="min-h-screen w-full bg-[#140120] text-[#fff9ef] flex flex-col items-center relative overflow-x-hidden font-body">
+    <div className="min-h-screen w-full bg-[#140120] text-[#fff9ef] flex flex-col items-center relative overflow-x-hidden font-body touch-pan-y">
       {/* Background Decorative Temple Halo */}
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_15%,#3a0e4f_0%,#180126_60%,#0e0017_100%)] z-0" />
 
       {/* Screen Frame Container */}
-      <div className="relative z-10 w-full max-w-[440px] min-h-screen flex flex-col bg-[#1c012d] shadow-[0_0_60px_rgba(0,0,0,0.9)] border-x border-[#ff6f00]/15">
+      <div className="relative z-10 w-full max-w-[480px] min-h-screen min-h-[100dvh] flex flex-col bg-[#1c012d] shadow-[0_0_60px_rgba(0,0,0,0.9)] border-x border-[#ff6f00]/20 touch-pan-y">
         {/* Global Header */}
         {currentScreen !== 'battle' && (
           <Header
@@ -436,7 +495,7 @@ export default function App() {
         )}
 
         {/* Main Content View Switcher */}
-        <main className={`flex-1 flex flex-col w-full ${currentScreen !== 'battle' ? 'pt-16' : ''}`}>
+        <main className={`flex-1 flex flex-col w-full touch-pan-y ${currentScreen !== 'battle' ? 'pt-[calc(3.5rem+max(env(safe-area-inset-top,0px),12px))] sm:pt-[calc(4rem+max(env(safe-area-inset-top,0px),12px))]' : ''}`}>
           {currentScreen === 'home' && (
             <HomeScreen
               player={player}
@@ -476,7 +535,12 @@ export default function App() {
           {currentScreen === 'ranks' && <LeaderboardScreen player={player} />}
 
           {currentScreen === 'rewards' && (
-            <RewardsScreen player={player} onAddCoins={handleAddCoins} />
+            <RewardsScreen
+              player={player}
+              onAddCoins={handleAddCoins}
+              onClaimReward={handleClaimReward}
+              onSpinComplete={handleSpinComplete}
+            />
           )}
         </main>
 
@@ -486,6 +550,7 @@ export default function App() {
             currentScreen={currentScreen}
             onNavigate={(s) => setCurrentScreen(s)}
             soundEnabled={player.soundEnabled}
+            isFreeSpinAvailable={isFreeSpinAvailable}
           />
         )}
 
@@ -516,6 +581,7 @@ export default function App() {
           isOpen={isSocialOpen}
           onClose={() => setIsSocialOpen(false)}
           player={player}
+          onShowToast={showToast}
         />
 
         {/* Notifications Modal */}
@@ -526,7 +592,17 @@ export default function App() {
           notifications={notifications}
           onRefreshNotifications={refreshNotifications}
           onUpdatePlayer={(updated) => setPlayer(updated)}
+          onShowToast={showToast}
         />
+
+        {/* Toast Notifications */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            icon={toast.icon}
+            onClose={() => setToast(null)}
+          />
+        )}
       </div>
     </div>
   );

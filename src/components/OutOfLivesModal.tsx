@@ -53,7 +53,7 @@ export const OutOfLivesModal: React.FC<OutOfLivesModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md select-none">
-      <div className="relative w-full max-w-[400px] bg-gradient-to-b from-[#3a1d4a] via-[#2a0e3b] to-[#1a0128] border-2 border-rose-500/60 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(244,63,94,0.35)] overflow-hidden flex flex-col p-5 text-center animate-in fade-in zoom-in duration-200">
+      <div className="relative w-full max-w-[400px] bg-gradient-to-b from-[#3a1d4a] via-[#2a0e3b] to-[#1a0128] border-2 border-rose-500/60 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(244,63,94,0.35)] overflow-y-auto max-h-[min(92dvh,620px)] my-auto flex flex-col p-4 sm:p-5 text-center animate-in fade-in zoom-in duration-200">
         {/* Close Button */}
         <button
           onClick={() => {

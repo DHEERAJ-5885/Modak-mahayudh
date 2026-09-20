@@ -53,7 +53,7 @@ export const PowersScreen: React.FC<PowersScreenProps> = ({ player, onUpgradePow
   ];
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-[440px] mx-auto pb-24 px-3.5 pt-3 select-none">
+    <div className="flex-1 flex flex-col w-full max-w-[480px] mx-auto pb-[calc(5rem+max(env(safe-area-inset-bottom,0px),12px))] px-3 sm:px-3.5 pt-3 touch-pan-y">
       <div className="flex items-center justify-between mb-3">
         <div className="flex flex-col">
           <span className="font-body text-[11px] text-[#ffb691] uppercase tracking-wider font-extrabold">
@@ -86,23 +86,23 @@ export const PowersScreen: React.FC<PowersScreenProps> = ({ player, onUpgradePow
               }`}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                   <div
-                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${
+                    className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${
                       isUnlocked ? p.gradient : 'from-stone-700 to-stone-900'
-                    } flex items-center justify-center text-[#3a1d4a] shadow-md relative`}
+                    } flex items-center justify-center text-[#3a1d4a] shadow-md relative shrink-0`}
                   >
                     <AppIcon
                       name={isUnlocked ? p.icon : 'lock'}
-                      size={28}
+                      size={26}
                       className="text-white"
                     />
                   </div>
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-display text-[16px] font-extrabold text-white">{p.name}</h3>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                      <h3 className="font-display text-[15px] sm:text-[16px] font-extrabold text-white truncate">{p.name}</h3>
                       {isUnlocked ? (
-                        <span className="font-hud text-[11px] bg-[#3a1d4a] px-2 py-0.5 rounded-md text-[#ffe16d] font-bold border border-[#ffe16d]/30">
+                        <span className="font-hud text-[10px] sm:text-[11px] bg-[#3a1d4a] px-2 py-0.5 rounded-md text-[#ffe16d] font-bold border border-[#ffe16d]/30">
                           LVL {p.level}
                         </span>
                       ) : (

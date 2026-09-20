@@ -51,7 +51,7 @@ export const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ player, on
   };
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-[440px] mx-auto pb-24 px-3.5 pt-3 select-none">
+    <div className="flex-1 flex flex-col w-full max-w-[480px] mx-auto pb-[calc(5rem+max(env(safe-area-inset-bottom,0px),12px))] px-3 sm:px-3.5 pt-3 touch-pan-y">
       {/* Top Header with Back / Close Button */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -91,12 +91,12 @@ export const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ player, on
       </div>
 
       {/* Current Player's Highlighted Standing Card */}
-      <div className="bg-gradient-to-r from-[#552000] via-[#853500] to-[#552000] rounded-2xl p-3.5 border-2 border-[#ffdb3c] shadow-[0_8px_20px_rgba(255,111,0,0.5)] mb-3 flex items-center justify-between relative overflow-hidden">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 rounded-xl bg-[#ffdb3c] text-[#341100] flex flex-col items-center justify-center font-hud text-[17px] font-black shadow shrink-0 leading-none">
+      <div className="bg-gradient-to-r from-[#552000] via-[#853500] to-[#552000] rounded-2xl p-3 sm:p-3.5 border-2 border-[#ffdb3c] shadow-[0_8px_20px_rgba(255,111,0,0.5)] mb-3 flex items-center justify-between gap-2 relative overflow-hidden">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#ffdb3c] text-[#341100] flex flex-col items-center justify-center font-hud text-[16px] sm:text-[17px] font-black shadow shrink-0 leading-none">
             <span>#{playerRank ? playerRank.rank : '--'}</span>
           </div>
-          <div className="flex flex-col min-w-0">
+          <div className="flex flex-col min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="font-body text-[10px] text-[#ffe16d] font-bold uppercase tracking-wider">
                 YOUR STANDING
@@ -105,10 +105,10 @@ export const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ player, on
                 YOU
               </span>
             </div>
-            <span className="font-display text-[15px] text-white font-extrabold leading-snug truncate">
+            <span className="font-display text-[14px] sm:text-[15px] text-white font-extrabold leading-snug truncate">
               {player.displayName || player.name}
             </span>
-            <span className="font-body text-[11px] text-[#ffd9de]">
+            <span className="font-body text-[10px] sm:text-[11px] text-[#ffd9de] truncate">
               Best Score:{' '}
               <strong className="text-[#ffdb3c] font-hud">
                 {(playerRank?.bestScore || player.highScore || 0).toLocaleString()} Pts
@@ -117,9 +117,9 @@ export const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ player, on
           </div>
         </div>
 
-        <div className="flex flex-col items-end text-[11px] font-hud text-[#ffe16d] font-bold shrink-0">
+        <div className="flex flex-col items-end text-[10px] sm:text-[11px] font-hud text-[#ffe16d] font-bold shrink-0">
           <span>{playerRank ? `Rank #${playerRank.rank}` : 'Unranked'}</span>
-          <span className="text-[9px] text-white font-normal">
+          <span className="text-[8px] sm:text-[9px] text-white font-normal">
             {playerRank && playerRank.rank <= 3
               ? '🥇 Maha Bhakta'
               : playerRank && playerRank.rank <= 10
